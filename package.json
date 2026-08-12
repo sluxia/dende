@@ -1,0 +1,19 @@
+{
+  "name": "@sluxia/dende-core",
+  "version": "1.0.0",
+  "description": "Coordinate conversion engine for Nigerian land mapping and surveys",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node dist/test.js"
+  },
+  "dependencies": {
+    "proj4": "^2.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/proj4": "^2.5.5",
+    "typescript": "^5.3.3"
+  }
+}
