@@ -3,7 +3,7 @@
 Started: 13 August 2026  
 Procedure: `SPATIAL_ASSET_ACQUISITION_PROCEDURE.md` v1.0  
 Campaign: `ng-cross-river-spatial-rerun-v1`  
-Current stage: government inventory
+Current stage: initial validation, with government inventory continuing
 
 ## Current result
 
@@ -66,3 +66,18 @@ The initial inventory names:
 4. Continue the government inventory through every remaining asset category
    before beginning Cross River media discovery.
 
+## Validation log
+
+### Oban and Okwangwo - first pass
+
+- **WDPA 40925 / Oban: failed as boundary geometry.** BIOPAMA reports a point
+  feature, centroid 8.55E 5.3333N, reported area 1,906 km2 and GIS area 0 km2.
+  The record supports identity and approximate location only. No centroid buffer
+  or synthetic footprint will be used.
+- **WDPA 20299 / combined Cross River National Park: inconclusive.** The register
+  identifier is confirmed, but the public extent endpoint returned HTTP 500 and
+  supplied no geometry. Oban and Okwangwo remain excluded from checks.
+- Reported areas differ materially among sources (Oban 1,906/2,800 km2;
+  Okwangwo 640/920 km2; combined park 4,000 km2). Validation must establish
+  whether these differences reflect old reserves, current park limits, enclaves,
+  source dates or simple reporting errors before using any polygon.

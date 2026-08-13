@@ -82,8 +82,8 @@ test("spatial acquisition campaigns enforce geometry-first execution order",asyn
   assert.deepEqual(campaigns.rows.map(r=>r.external_key),[
     'ng-cross-river-spatial-rerun-v1','ng-akwa-ibom-spatial-rerun-v1','ng-national-spatial-assets-v1'
   ]);
-  assert.equal(campaigns.rows[0].status,'inventory');
-  assert.equal(campaigns.rows[0].current_stage,'government_inventory');
+  assert.ok(['inventory','validating'].includes(campaigns.rows[0].status));
+  assert.ok(['government_inventory','validation'].includes(campaigns.rows[0].current_stage));
   assert.ok(campaigns.rows.slice(1).every(r=>r.status==='queued'));
 
   const inventory=await pool.query<{count:number;eligible:number;with_geometry:number}>(`SELECT count(*)::int count,count(*) FILTER(WHERE check_status='eligible')::int eligible,count(*) FILTER(WHERE geometry IS NOT NULL)::int with_geometry FROM provenance.spatial_asset_inventory WHERE campaign_id=(SELECT id FROM provenance.spatial_acquisition_campaigns WHERE external_key='ng-cross-river-spatial-rerun-v1')`);
@@ -92,6 +92,17 @@ test("spatial acquisition campaigns enforce geometry-first execution order",asyn
     pool.query(`INSERT INTO provenance.spatial_asset_inventory(campaign_id,external_key,asset_name,asset_class,country_code,geometry_status,check_status) SELECT id,'test-invalid-eligible','Invalid fixture','other','NG','unavailable','eligible' FROM provenance.spatial_acquisition_campaigns WHERE external_key='ng-cross-river-spatial-rerun-v1'`),
     /check constraint/
   );
+});
+
+test("point-only protected-area records fail boundary validation",async(t)=>{
+  if(!available)return t.skip("PostGIS not reachable");
+  const oban=await pool.query<{geometry_status:string;check_status:string;acquisition_status:string;geometry:boolean}>(`SELECT geometry_status,check_status,acquisition_status,geometry IS NOT NULL geometry FROM provenance.spatial_asset_inventory WHERE external_key='crs-asset-crnp-oban'`);
+  assert.deepEqual(oban.rows[0],{geometry_status:'unavailable',check_status:'excluded',acquisition_status:'under_review',geometry:false});
+  const events=await pool.query<{candidate_reference:string;outcome:string;observed_values:{featureType?:string;gisAreaKm2?:number}}>(`SELECT candidate_reference,outcome,observed_values FROM provenance.spatial_validation_events WHERE asset_id=(SELECT id FROM provenance.spatial_asset_inventory WHERE external_key='crs-asset-crnp-oban') ORDER BY candidate_reference`);
+  assert.equal(events.rows.find(r=>r.candidate_reference==='WDPA 40925')?.outcome,'failed');
+  assert.equal(events.rows.find(r=>r.candidate_reference==='WDPA 40925')?.observed_values.featureType,'point');
+  assert.equal(events.rows.find(r=>r.candidate_reference==='WDPA 40925')?.observed_values.gisAreaKm2,0);
+  assert.equal(events.rows.find(r=>r.candidate_reference==='WDPA 20299')?.outcome,'inconclusive');
 });
 
 test("document evidence and review history are append-only",async(t)=>{
