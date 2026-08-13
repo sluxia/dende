@@ -15,6 +15,16 @@
 # production
 /build
 /dist
+/server/dist
+/server/node_modules
+
+# server uploads
+/.uploads
+/server/.uploads
+/server/server.log
+
+# local self-contained PostGIS (micromamba/conda-forge)
+/.conda-env
 
 # misc
 .DS_Store
@@ -35,3 +45,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+plan.md
+CLAUDE.md
+.agents
+.claude
+
+# tesseract.js runtime cache (downloaded traineddata)
+.tesseract/
+*.traineddata

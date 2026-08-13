@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dende.local/schemas/land-analysis-v1.schema.json",
+  "title": "Dende land material analysis v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["assetExternalKey", "analysisExternalKey", "extractionExternalKey", "analysisType", "provider", "model", "promptVersion", "schemaVersion", "rawResponse", "structuredOutput"],
+  "properties": {
+    "assetExternalKey": { "type": "string", "minLength": 1 },
+    "analysisExternalKey": { "type": "string", "minLength": 1 },
+    "extractionExternalKey": { "type": "string", "minLength": 1 },
+    "analysisType": { "enum": ["land_document", "survey_plan", "layout_plan", "map", "tabular_coordinates", "general_discovery"] },
+    "provider": { "type": "string", "minLength": 1 },
+    "model": { "type": "string", "minLength": 1 },
+    "modelVersion": { "type": ["string", "null"] },
+    "promptVersion": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": "land-analysis/v1" },
+    "inputChecksum": { "type": ["string", "null"] },
+    "rawResponse": {},
+    "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "usageMetadata": { "type": "object" },
+    "diagnostics": { "type": "object" },
+    "structuredOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observations"],
+      "properties": {
+        "documentFacts": { "type": "object" },
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "observations": { "type": "array", "items": { "$ref": "#/$defs/observation" } },
+        "geometryCandidates": { "type": "array", "items": { "$ref": "#/$defs/geometryCandidate" } }
+      }
+    }
+  },
+  "$defs": {
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["externalKey", "type", "rawText", "values", "confidence"],
+      "properties": {
+        "externalKey": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["coordinate_pair", "latitude_longitude", "bearing_distance", "area", "beacon", "plot_number", "survey_number", "title_number", "date", "other"] },
+        "pageNumber": { "type": ["integer", "null"], "minimum": 1 },
+        "locator": { "type": ["string", "null"], "description": "Cell, table, paragraph, image region, feature or archive-member locator." },
+        "rawText": { "type": "string", "minLength": 1 },
+        "values": { "type": "object" },
+        "unit": { "type": ["string", "null"] },
+        "crsCandidates": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "geometryCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["externalKey", "method", "observationExternalKeys", "confidence"],
+      "properties": {
+        "externalKey": { "type": "string", "minLength": 1 },
+        "method": { "enum": ["coordinate_table", "bearing_traverse", "geocoded_extent", "digitized_plan", "linked_dataset"] },
+        "sourceCrs": { "type": ["string", "null"] },
+        "geometryWgs84": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object", "required": ["type", "coordinates"], "properties": { "type": { "enum": ["Polygon", "MultiPolygon"] }, "coordinates": { "type": "array" } } }
+          ]
+        },
+        "observationExternalKeys": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "closureErrorM": { "type": ["number", "null"] },
+        "areaDifferencePercent": { "type": ["number", "null"] },
+        "landEventId": { "type": ["string", "null"], "format": "uuid" }
+      }
+    }
+  }
+}

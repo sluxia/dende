@@ -4,12 +4,20 @@
   "description": "Coordinate conversion engine for Nigerian land mapping and surveys",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "workspaces": [
+    "server"
+  ],
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node dist/test.js"
+    "prepare": "npm run build",
+    "test": "npm run build && node dist/test.js",
+    "test:parser": "npm run build && node dist/test-parser.js"
   },
   "dependencies": {
-    "proj4": "^2.11.0"
+    "@google/genai": "^2.16.0",
+    "proj4": "^2.11.0",
+    "sharp": "^0.35.3",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

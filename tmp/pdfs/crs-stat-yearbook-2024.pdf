@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/app-icon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="keywords" content="crossriver, crossriverstate, tourism, cattle ranch, culture, business, mining, quarries, destination, destination crossriver, government, people, the people's paradise, the nation's paradise, paradise city, calabar, margaret ekpo airport, crossriver pay, mycrossriver." />
+  <meta name="description" content="As the best tourist destination in Africa, we take pride in being the cleanest and greenest State in Nigeria, providing an accommodating, healthy and hygienic environment for everyone." />
+  <title>Cross River State</title>
+  <!-- <link href='https://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext' rel='stylesheet' type='text/css'> -->
+  
+
+  <script type="module" crossorigin src="/assets/index-2e92ea2e.js"></script>
+  <link rel="stylesheet" href="/assets/index-51e7134d.css">
+</head>
+
+<body>
+  <div id="root"></div>
+  
+</body>
+
+</html>

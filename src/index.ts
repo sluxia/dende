@@ -98,3 +98,13 @@ export function convertPolygon(
 
 export { PROJECTIONS, CRS_NAMES } from "./projections";
 export type { SupportedCRS } from "./projections";
+export { parseSurveyImage } from "./parser";
+export { parseSurveyImageLocal } from "./local-ocr";
+export { enhanceImage } from "./enhance-image";
+export { computeTraverseVertices } from "./traverse";
+export { renderSurveyMapHtml } from "./map-render";
+export type { MapVertex, SurveyMapOptions } from "./map-render";
+export { GeminiProvider, MistralProvider, GroqProvider } from "./vision";
+export type { VisionProvider, VisionRequest, VisionResponse } from "./vision";
+export type { TraverseLeg, TraverseAnchor, TraverseVertex } from "./traverse";
+export type { ParserOptions, ParserResult, ExtractedSurveyData, ParseMethod, VisionProviderId } from "./types";
