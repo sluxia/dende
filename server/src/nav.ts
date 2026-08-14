@@ -1,4 +1,4 @@
-export type NavSection = "registry" | "check" | "sources" | "research" | "protect";
+export type NavSection = "registry" | "check" | "sources" | "research" | "protect" | "account";
 
 export const TOP_NAV_CSS = `
   .top-nav { height: 48px; box-sizing: border-box; background: #111827; color: #fff; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 20px; position:relative; z-index:10000; }
@@ -30,6 +30,7 @@ export function renderTopNav(active: NavSection): string {
     <a href="/sources"${active === "sources" ? ' class="active" aria-current="page"' : ""}>Data sources</a>
     <a href="/research"${active === "research" ? ' class="active" aria-current="page"' : ""}>Land evidence</a>
     <a href="/protect"${active === "protect" ? ' class="active" aria-current="page"' : ""}>Protect a plot</a>
+    <a href="/account"${active === "account" ? ' class="active" aria-current="page"' : ""}>Account</a>
   </nav>
 </header>`;
 }

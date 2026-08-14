@@ -1,0 +1,46 @@
+{
+  "assetExternalKey": "abia-asset-replace-me",
+  "analysisExternalKey": "abia-asset-replace-me-analysis-v1",
+  "extractionExternalKey": "abia-asset-replace-me-file-v1",
+  "analysisType": "tabular_coordinates",
+  "provider": "manual-research",
+  "model": "human-reviewed-extraction",
+  "modelVersion": null,
+  "promptVersion": "state-sourcing-v1",
+  "schemaVersion": "land-analysis/v1",
+  "inputChecksum": null,
+  "rawResponse": {
+    "note": "Preserve untouched extraction or transcription here."
+  },
+  "confidence": 0.5,
+  "usageMetadata": {},
+  "diagnostics": {
+    "status": "example-only"
+  },
+  "structuredOutput": {
+    "documentFacts": {
+      "sourceUrl": "https://example.invalid/replace-with-direct-file",
+      "title": "FORMAT EXAMPLE — source document title"
+    },
+    "warnings": [
+      "FORMAT EXAMPLE ONLY — verify CRS, axis order and source locator."
+    ],
+    "observations": [
+      {
+        "externalKey": "abia-asset-replace-me-observation-1",
+        "type": "coordinate_pair",
+        "pageNumber": 1,
+        "locator": "Table 1, row 1",
+        "rawText": "E 000000.000 N 000000.000",
+        "values": {
+          "easting": 0,
+          "northing": 0
+        },
+        "unit": "metre",
+        "crsCandidates": [],
+        "confidence": 0.5
+      }
+    ],
+    "geometryCandidates": []
+  }
+}

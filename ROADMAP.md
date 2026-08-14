@@ -4,6 +4,10 @@ This is the canonical product and infrastructure roadmap for Dende. It reflects
 the current implementation and should be updated whenever a material capability
 is completed or reprioritized.
 
+Last reconciled: 14 August 2026. The Cross River acquisition campaign is paused
+at the user's direction after the Kwa Falls evidence bundle. No additional
+subject should be researched or activated until the campaign is resumed.
+
 ## Product direction
 
 Dende helps people understand a parcel before buying, registering, or relying
@@ -11,9 +15,10 @@ on it. It converts survey plans and coordinates into mapped boundaries, checks
 them against available spatial records, and clearly distinguishes official,
 reference, user-submitted, and verified information.
 
-The current priority is reliable infrastructure and transparent results. User
-accounts, authentication, authorization, and public production access remain
-deliberately deferred until the underlying data and audit workflows are stable.
+The current priority is reliable infrastructure and transparent results. Basic
+individual accounts and secure sessions now exist as the dependency foundation;
+contact verification, recovery delivery, authorization roles and public
+production access remain gated until their security and abuse controls are ready.
 
 Dende's commercial value is layered land-risk screening and verification, not
 the sale of access to a database. Automated results must always state their
@@ -86,7 +91,7 @@ coverage limits and must never be presented as proof of title.
 - [x] Preserve immutable ownership-notice and verification histories so newer
   submissions cannot silently replace earlier claims or conflicts.
 - [x] Add individual source pages and immutable import-history details.
-- [ ] Add source filtering and coverage search.
+- [x] Add source filtering and coverage search.
 - [x] Add privacy-safe contact, challenge, correction, and withdrawal flows.
 - [ ] Add moderation, dispute resolution, renewals, transfers, notifications,
   and monitoring.
@@ -102,8 +107,11 @@ inputs, not coverage.
 
 - [x] Adopt the government inventory → authoritative instrument → geometry
   acquisition → validation → activation → media discovery sequence.
-- [ ] Rerun Cross River from the beginning under the spatial procedure — in
-  progress; campaign and first 13 reserve/park inventory targets are stored.
+- [ ] Rerun Cross River from the beginning under the spatial procedure — paused
+  after approved single-subject work on CFTZ, Marina Resort, Obudu Mountain
+  Resort/approach-road ROW and Kwa Falls. The inventory now contains 63 distinct
+  spatial targets: 55 queued, four researching and four with representative or
+  source-located geometry. All 63 remain excluded from spatial checks.
 - [ ] Rerun Akwa Ibom from the beginning under the spatial procedure.
 - [ ] Run national/federal assets after both pilot-state reruns.
 - [ ] Process every remaining state with inventory and geometry completion gates.
@@ -142,9 +150,11 @@ planning changes and court outcomes in fragmented public records.
   geometry can become eligible for spatial checks.
 - [x] Seed a small Cross River evidence set from official ministry pages,
   government news, budgets and statistical publications.
-- [x] Complete the first expanded Cross River discovery pass: 19 searchable
-  events, 20 supporting documents, two acquired/checksummed official PDFs and
-  six remaining file assets queued for acquisition or extraction.
+- [x] Complete the expanded Cross River discovery and approved subject passes:
+  34 searchable land events and 43 preserved supporting documents are currently
+  stored. Thirty-three events remain contextual and excluded from checks; one
+  earlier event is eligible under the evidence gate. Spatial-asset inventory
+  records remain independently excluded unless validated geometry is activated.
 - [x] Add a public historical-evidence catalogue and evidence-detail pages.
 - [x] Build the secured discovery, acquisition-status, AI-analysis and review
   queue API; preserve source URLs, checksums, storage URIs and immutable runs.
@@ -168,6 +178,49 @@ planning changes and court outcomes in fragmented public records.
   future separate scheduled-workflow repository.
 - [ ] Create that separate workflow repository only after the receiving schema,
   review process and source-quality rules have proven stable in Cross River.
+
+### Parallel research-skill pipeline
+
+Data acquisition is a parallel operational programme and should not block the
+main product build. Coverage grows gradually through schema-gated staging; no
+skill output becomes searchable or check eligible merely because a run finished.
+
+- [x] Add a `sourcer` skill with a jurisdiction lock, 21-query state inventory,
+  per-asset progression, strict query/run schemas and approved-asset handoff.
+- [x] Add an `evidence-acquirer` skill with explicit evidence bundles,
+  checksums, file/jurisdiction identity, visual-inspection state, observation
+  provenance and an asset-relevance gate.
+- [x] Add a `geometry-evidence-reviewer` skill with identity, CRS, topology,
+  area, coverage, currency and activation-prerequisite gates.
+- [x] Add deterministic positive and negative contract validation across all
+  three stages. The earlier FCT AGIS/Imo association is rejected by the current
+  contracts and has not been retained as an ingestion migration.
+- [ ] Migrate or explicitly close legacy FCT and Ogun staging runs before a new
+  jurisdiction is selected. Continue state population gradually through the
+  skills without making it a dependency for account, privacy or commerce work.
+
+### Cross River pause checkpoint
+
+- [x] Store and review production evidence for the Calabar Free Trade Zone,
+  preserving the historic assigned area and proposed extension separately while
+  withholding boundary activation.
+- [x] Store Marina Resort evidence, including the state-control record and a
+  representative location point that is explicitly rejected as boundary
+  geometry.
+- [x] Store Obudu Mountain Resort, Becheve Nature Reserve and the federal
+  approach-road right-of-way as independent assets. Preserve the 104/134 km²
+  resort-area conflict and quarantine the 262-beacon ROW register pending
+  rendered-page transcription.
+- [x] Store Kwa Falls as four independent records: tourism site, waterfall/Great
+  Kwa River corridor, historic oil-palm estate and federal irrigation project.
+  Preserve the transposed coordinate labels and conflicting estate-area reports;
+  do not infer any perimeter from them.
+- [ ] On resumption, first decide whether to finish the statewide category
+  inventory gate or formally replace that gate with the later approved
+  one-subject-at-a-time protocol. Do not continue under contradictory rules.
+- [ ] After that decision, select exactly one Cross River subject, run 10–15
+  focused queries on that subject, present the evidence and data-quality limits,
+  and wait for explicit approval before storing it or moving to another subject.
 
 ## Monetization — launch offering
 
@@ -225,15 +278,21 @@ fees, and the verification depth requested.
 
 ### Commercial launch prerequisites
 
-- [ ] Generate immutable downloadable reports with permanent IDs.
+- [x] Generate immutable evidence reports with permanent IDs, versioned JSON
+  snapshots, SHA-256 integrity hashes, downloadable JSON and a print/PDF-ready
+  public view. Report snapshots retain the exact plot, findings, consulted
+  sources, coverage statement and disclaimer from the selected check run.
 - [ ] Add a verification-request workflow, case status, internal review queue,
-  evidence ledger, and service-delivery audit trail.
+  evidence ledger, and service-delivery audit trail. A preliminary implementation
+  was rejected and removed from the active product surface; redesign requires
+  explicit approval before this item resumes.
 - [ ] Define privacy, consent, sensitive-document retention, deletion, and
   reviewer-access policies.
 - [ ] Add clear terms, coverage disclosures, liability boundaries, refund
   policy, turnaround commitments, and complaint handling.
-- [ ] Record prices, orders, payments, receipts, refunds, external fees, and
-  fulfilment status independently from check results.
+- [x] Record versioned prices, orders, order lines, payment attempts, receipts,
+  refunds, external fees and fulfilment status independently from check results.
+  Checkout stays disabled until an approved price and payment integration exist.
 - [ ] Validate the three launch offers with buyers, landholders, surveyors,
   lawyers, agents, and developers before automating the full purchase flow.
 
@@ -244,9 +303,13 @@ may create an account directly or naturally during checkout or plot
 protection. A newly eligible, verified account receives introductory credits
 to run genuine preliminary checks before purchasing.
 
+Dependency order: identity and sessions → contact verification and recovery →
+resource ownership and permissions → operator/reviewer authorization → privacy
+and retention enforcement → verification services → credits and commerce.
+
 ### Account model
 
-- [ ] Support verified individual accounts without forcing every public visitor
+- [x] Support verified individual accounts without forcing every public visitor
   to register.
 - [ ] Let professionals register independently, with a separate credential
   status of unverified, pending, verified, rejected, suspended, or expired.
@@ -274,19 +337,27 @@ to run genuine preliminary checks before purchasing.
 
 ### Introductory credit model
 
-- [ ] Grant three promotional credits once to an eligible verified new account.
-- [ ] Initially charge one credit for a manual preliminary check and two credits
-  for a survey-plan scan plus automated check.
-- [ ] Keep plot-protection notices free during initial adoption.
+- [x] Grant three promotional credits once to an eligible verified new account.
+  The idempotent grant is created after email verification, expires after 90
+  days, and is also safely backfilled when an eligible account opens its wallet.
+- [x] Charge one credit for a manual preliminary check and two credits for a
+  survey-plan scan plus automated check. The API reserves before processing,
+  consumes after success and releases after failure using request idempotency.
+- [x] Keep plot-protection notices free during initial adoption; their dedicated
+  intake bypasses the preliminary-check charge without granting paid features.
 - [ ] Price detailed reports separately through additional credits or direct
   payment; keep human review, monitoring, and third-party authority fees
   outside promotional-credit spending unless explicitly enabled.
-- [ ] Store promotional and purchased value separately, including their expiry,
-  refund, transfer, and permitted-product rules.
-- [ ] Reserve credits before costly processing, consume them only after success,
-  and automatically release reservations after failure or timeout.
-- [ ] Record grants, purchases, reservations, consumption, release, refund,
-  expiry, transfer, and administrative adjustment in an immutable ledger.
+- [x] Store promotional and purchased value in separate ledger buckets, with
+  product references and expiry metadata. Automated lot expiry, transfer and
+  refund policy enforcement remain pending.
+- [x] Reserve credits before costly processing, consume them only after success,
+  and release reservations after failure or timeout. Expired reservations are
+  reclaimed transactionally and idempotently during wallet use or through a
+  protected worker endpoint, and cannot later be consumed.
+- [x] Provide an immutable credit ledger capable of recording grants, purchases,
+  reservations, consumption, release, refund, expiry, transfer and reasoned
+  adjustments, with actor, product/reference, reversal and idempotency fields.
 - [ ] Add verified-contact requirements, rate limits, duplicate-grant controls,
   device/payment risk signals, and reasoned administrative adjustments.
 - [ ] Ensure free-credit results use the same checking quality and evidence
@@ -299,44 +370,66 @@ separate concerns. Avoid a single `user_type` or mutable credit-balance column.
 
 ### Identity tables
 
-- [ ] Add `accounts.users` for stable user identity, lifecycle, preferred
+- [x] Add `accounts.users` for stable user identity, lifecycle, preferred
   locale/timezone, and creation metadata; keep contact methods separate.
-- [ ] Add `accounts.identities` for normalized email/phone identifiers,
+- [x] Add `accounts.identities` for normalized email/phone identifiers,
   verification status, verification timestamps, and uniqueness controls.
-- [ ] Add `accounts.sessions` and short-lived verification/recovery challenges
+- [x] Add `accounts.sessions` and short-lived verification/recovery challenges
   with hashed secrets, expiry, revocation, device metadata, and last use.
+- [x] Add email-verification and password-recovery challenge flows with hashed,
+  30-minute, single-use links; enumeration-safe recovery responses; hourly
+  issuance limits; development delivery outbox; password rehashing; audit events;
+  and revocation of every active session after a password reset. Production email
+  delivery remains an integration requirement.
 - [ ] Add `accounts.professional_profiles` and immutable credential evidence,
   reviewer decisions, issuing body, jurisdiction, validity, and expiry.
 - [ ] Add `accounts.organizations`, memberships, invitations, organization
   roles, membership lifecycle, and billing contact metadata.
+- [x] Add the initial organization authorization layer: organizations,
+  memberships, seven scoped roles, centralized permission mappings, seven-day
+  email-matched invitations, individual-or-organization resource constraints,
+  owner-only organization transfers and an immutable resource-ownership ledger.
+  Billing contacts and organization lifecycle administration remain pending.
 
 ### Authorization and resource ownership
 
-- [ ] Define application permissions centrally and map them to system and
-  organization roles; do not scatter authorization assumptions through routes.
+- [x] Attach plots, ownership notices and evidence reports created during an
+  authenticated session to that individual account; preserve legacy and new
+  anonymous records as explicitly unowned rather than guessing ownership. Add
+  an owner-only My Records API/page and prevent non-owners from generating new
+  reports for account-owned plots.
+- [x] Define application permissions centrally and map them to system and
+  organization roles. Dende system roles now use a separate permission map;
+  internal intelligence routes authorize either scoped staff sessions or the
+  dedicated automation credential.
 - [ ] Add an explicit owner type/ID and creator to reports, cases, protected
   plot records, document submissions, monitoring rules, and orders.
 - [ ] Add case-level collaborators with narrowly scoped view, edit, review,
   billing, and export permissions.
 - [ ] Record actor, subject, organization, action, request context, before/after
   references, and timestamp in a tamper-evident audit-event stream.
-- [ ] Treat privileged Dende operator access as separately assigned, expiring
-  where appropriate, and fully audited.
+- [x] Treat privileged Dende operator access as separately assigned and fully
+  audited. Operator, reviewer, source-manager and support assignments have
+  explicit start/revocation state and optional expiry; every allowed or denied
+  privileged request enters an append-only access ledger. Administrative role
+  provisioning UI and stronger step-up authentication remain pending.
 
 ### Credits and commerce tables
 
-- [ ] Add wallets scoped to a user or organization and denominated in credit
+- [x] Add wallets scoped to a user or organization and denominated in credit
   units, without storing an authoritative mutable balance.
-- [ ] Add an append-only credit ledger with transaction type, quantity,
+- [x] Add an append-only credit ledger with transaction type, quantity,
   promotional/purchased bucket, related product/order/check, idempotency key,
   expiry lot, reversal link, actor, reason, and timestamps.
-- [ ] Derive available, reserved, consumed, expired, and refundable balances
-  from ledger entries or a rebuildable projection.
-- [ ] Add products, versioned prices, orders, order lines, payment attempts,
-  receipts, refunds, external fees, taxes, and fulfilment records separately
-  from credits and check evidence.
-- [ ] Require idempotency and database transactions for credit reservation,
-  consumption, payment callbacks, refunds, and introductory grants.
+- [x] Derive available, reserved, consumed and expired balances, including
+  promotional/purchased subtotals, from ledger entries. Refundable-balance
+  policy remains pending until purchased credits and payments are introduced.
+- [x] Add products, versioned prices, orders, order lines, payment attempts,
+  receipts, refunds, external fees, taxes, immutable order events and fulfilment
+  records separately from credits and check evidence.
+- [x] Require idempotency and database transactions for introductory grants,
+  credit reservation, consumption and release. Payment callbacks and refunds
+  remain pending with the commerce tables.
 
 ## Language, locale, and currency infrastructure
 
@@ -346,12 +439,13 @@ records do not assume either is permanent.
 
 ### Language and locale
 
-- [ ] Use BCP 47 locale identifiers such as `en-NG`, with a documented fallback
-  chain from user preference to organization preference, country default, and
-  application default.
+- [x] Use canonical BCP 47 locale identifiers such as `en-NG`, with runtime
+  fallback from weighted request preference to organization preference, user
+  preference, market default, and application default.
 - [ ] Move user-interface copy, validation messages, emails, report labels, and
-  notification templates into versioned translation keys rather than storing
-  translated sentences in application logic.
+  notification templates into versioned translation keys. Product and initial
+  authentication copy now use the versioned message store; remaining surfaces
+  still require migration.
 - [ ] Support pluralization, interpolation, localized dates/numbers, and future
   right-to-left layout without placing sentence fragments in translations.
 - [ ] Store user-entered legal names, addresses, statements, source titles, and
@@ -359,44 +453,47 @@ records do not assume either is permanent.
   with language, translator/method, review status, and timestamp.
 - [ ] Version report and legal/disclosure copy so historical reports retain the
   exact language and meaning presented when generated.
-- [ ] Start with `en-NG`; select the next languages from user research rather
+- [x] Start with `en-NG`; select the next languages from user research rather
   than assuming a translation order.
 
 ### Currency, pricing, and accounting
 
-- [ ] Store ISO 4217 currency codes and integer minor units for monetary values;
-  never use floating-point numbers for prices, payments, taxes, or refunds.
-- [ ] Store credit quantities as integer service units independent of money and
+- [x] Store ISO 4217 currency codes and integer minor units in the versioned
+  price foundation; floating-point monetary amounts are not accepted.
+- [x] Store credit quantities as integer service units independent of money and
   currency, so one credit is not implicitly one Naira or one foreign unit.
 - [ ] Version prices by product, market/country, currency, validity period, tax
-  treatment, and sales channel; snapshot the accepted price on every order.
-- [ ] Keep display currency, charged currency, settlement currency, and ledger
+  treatment, and sales channel. The versioned catalogue is implemented without
+  inventing approved sale prices; order-time snapshots remain pending.
+- [x] Keep display currency, charged currency, settlement currency, and ledger
   accounting currency explicit when they differ.
 - [ ] Record exchange-rate source, rate, timestamp, direction, rounding, and
   converted amounts whenever conversion occurs; never recompute historical
   orders using a current rate.
-- [ ] Format currency through locale-aware presentation while preserving the
+- [x] Format currency through locale-aware presentation while preserving the
   stored currency code and exact minor-unit amount.
-- [ ] Begin with `NGN` pricing and avoid multi-currency checkout until payment,
+- [x] Begin the active Nigerian market with `NGN` and keep payment disabled;
+  avoid multi-currency checkout until payment,
   refund, tax, reconciliation, and reporting behavior is verified per market.
 - [ ] Keep third-party/authority fees as separately disclosed order lines rather
   than hiding them in Dende service pricing.
 
 ### International product configuration
 
-- [ ] Add country/market configuration for supported locales, currencies, CRS
-  choices, address formats, legal copy, tax rules, products, prices, payment
-  methods, source coverage, and feature availability.
-- [ ] Use stable machine identifiers for products and findings; translate only
-  presentation labels and explanations.
+- [x] Add extensible country/market configuration for supported locales,
+  currency, default CRS and feature/payment configuration. Address formats,
+  legal copy, tax rules and source-coverage bindings remain pending.
+- [x] Use stable machine identifiers for products and translate presentation
+  labels and explanations through versioned message keys.
 - [ ] Test locale fallback, missing translations, plural rules, long text,
   right-to-left layout, currency rounding, zero-decimal currencies, refunds,
   and historical price/report reproduction before adding a new market.
 
 ## Later — accounts and commercial workflows
 
-- [ ] Implement the planned accounts, authentication, authorization, and roles
-  after the schema and threat model are reviewed.
+- [ ] Complete production account security: delivery integrations, rate limits,
+  abuse controls, step-up authentication, privacy/retention enforcement and
+  administrative provisioning.
 - [ ] Add paid verification requests and professional review workflows.
 - [ ] Add saved parcels, alerts, case ownership, and organization workspaces.
 - [ ] Add professional subscriptions with bulk checks, case management,
@@ -405,7 +502,9 @@ records do not assume either is permanent.
 
 ## Current development constraint
 
-Dende has no user accounts or authentication. It should be treated as a
-controlled development environment, not a public production land registry.
-User-submitted notices are not proof of legal ownership, and clean checks are
-limited to the datasets explicitly disclosed in their results.
+Dende now has basic email/password accounts and revocable server-side sessions,
+but email verification, recovery delivery, role-based authorization, account-
+owned resources, rate limiting and abuse protection are not complete. It should
+still be treated as a controlled development environment, not a public production
+land registry. User-submitted notices are not proof of legal ownership, and clean
+checks are limited to the datasets explicitly disclosed in their results.

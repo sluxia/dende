@@ -1,0 +1,91 @@
+{
+  "assetExternalKey": "crs-example-layout-001",
+  "analysisExternalKey": "crs-example-layout-001-analysis-v1",
+  "extractionExternalKey": "crs-example-layout-001-extraction-v1",
+  "analysisType": "layout_plan",
+  "provider": "local",
+  "model": "document-inspection",
+  "modelVersion": null,
+  "promptVersion": "evidence-acquirer-v1",
+  "schemaVersion": "land-analysis/v1",
+  "inputChecksum": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "rawResponse": {
+    "preservedPath": "extracted/raw-response.json"
+  },
+  "confidence": 0.84,
+  "usageMetadata": {},
+  "diagnostics": {
+    "formatFamily": "pdf",
+    "methods": ["embedded-text", "rendered-page-review", "ocr"],
+    "pagesInspected": [1, 2, 3],
+    "observationSources": {
+      "crs-example-layout-001-coordinate-001": {
+        "fileKey": "file-001",
+        "relationship": "primary",
+        "countryCode": "NG",
+        "adminLevel1": "Cross River",
+        "supportsTargetBoundary": true
+      },
+      "crs-example-layout-001-area-001": {
+        "fileKey": "file-001",
+        "relationship": "primary",
+        "countryCode": "NG",
+        "adminLevel1": "Cross River",
+        "supportsTargetBoundary": true
+      }
+    }
+  },
+  "structuredOutput": {
+    "documentFacts": {
+      "title": "Example approved layout",
+      "publisher": "Example authority"
+    },
+    "warnings": [
+      "The document does not state an EPSG code; CRS candidates require review."
+    ],
+    "observations": [
+      {
+        "externalKey": "crs-example-layout-001-coordinate-001",
+        "type": "coordinate_pair",
+        "pageNumber": 3,
+        "locator": "Table 2, row A1, columns Easting and Northing",
+        "rawText": "A1 456789.20 543210.10",
+        "values": {
+          "label": "A1",
+          "first": 456789.2,
+          "second": 543210.1,
+          "axisOrder": "as-printed"
+        },
+        "unit": "metre",
+        "crsCandidates": ["EPSG:26392", "EPSG:26393"],
+        "confidence": 0.93
+      },
+      {
+        "externalKey": "crs-example-layout-001-area-001",
+        "type": "area",
+        "pageNumber": 2,
+        "locator": "Plan notes, item 4",
+        "rawText": "Total Area: 24.6 Ha",
+        "values": { "value": 24.6 },
+        "unit": "hectare",
+        "crsCandidates": [],
+        "confidence": 0.99
+      }
+    ],
+    "geometryCandidates": [
+      {
+        "externalKey": "crs-example-layout-001-geometry-001",
+        "method": "coordinate_table",
+        "sourceCrs": null,
+        "geometryWgs84": null,
+        "observationExternalKeys": [
+          "crs-example-layout-001-coordinate-001"
+        ],
+        "confidence": 0.45,
+        "closureErrorM": null,
+        "areaDifferencePercent": null,
+        "landEventId": null
+      }
+    ]
+  }
+}

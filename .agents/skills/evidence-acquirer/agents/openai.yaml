@@ -1,0 +1,4 @@
+interface:
+  display_name: "Evidence Acquirer"
+  short_description: "Acquire and extract one approved land record"
+  default_prompt: "Use $evidence-acquirer to acquire and extract one approved Dende land-record asset."

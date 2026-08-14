@@ -1,0 +1,49 @@
+{
+  "state": "abia",
+  "access_reviewed_at": "2026-08-14",
+  "assets": [
+    {
+      "external_key": "abia-asset-example-government-layout",
+      "asset_name": "FORMAT EXAMPLE — replace with researched asset",
+      "alternate_names": [],
+      "asset_class": "government_layout",
+      "authority_name": "FORMAT EXAMPLE — responsible authority",
+      "admin_level_2": null,
+      "locality": null,
+      "legal_status": "unknown",
+      "instrument_reference": null,
+      "survey_reference": null,
+      "stated_area_sqm": null,
+      "source_url": "https://example.invalid/replace-with-source",
+      "file_url": null,
+      "geometry_status": "unavailable",
+      "acquisition_status": "not_started",
+      "missing_material": "Constituting instrument and authoritative boundary",
+      "next_action": "Locate the gazette and deposited survey/layout plan",
+      "evidence_notes": "FORMAT EXAMPLE ONLY — never submit this row unchanged.",
+      "risk_priority": 1,
+      "risk_reason": "Boundary unavailable and private-sale confusion is plausible.",
+      "visibility": "public"
+    }
+  ],
+  "target_sources": [
+    {
+      "type": "cadastral",
+      "name": "FORMAT EXAMPLE — replace with target source",
+      "provider": "FORMAT EXAMPLE — official custodian",
+      "admin_level_1": "Abia",
+      "format": "mixed",
+      "source_url": "https://example.invalid/replace-with-source",
+      "license": null,
+      "authority_level": "official",
+      "status": "planned",
+      "coverage_status": "unavailable",
+      "access_stage": "authority_identified",
+      "access_method": "Formal data request",
+      "access_contact": null,
+      "access_notes": "No usable dataset acquired.",
+      "access_reviewed_at": "2026-08-14",
+      "description": "FORMAT EXAMPLE ONLY — never submit unchanged."
+    }
+  ]
+}

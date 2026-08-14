@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dende.local/schemas/approved-research-asset-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runKey", "assetExternalKey", "canonicalName", "jurisdiction", "discoveredFromUrl", "retrievalTargets", "approval"],
+  "properties": {
+    "schemaVersion": { "const": "approved-research-asset/v1" },
+    "runKey": { "type": "string", "minLength": 1 },
+    "assetExternalKey": { "type": "string", "minLength": 1 },
+    "canonicalName": { "type": "string", "minLength": 1 },
+    "aliases": { "type": "array", "items": { "type": "string" } },
+    "jurisdiction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["countryCode", "adminLevel1"],
+      "properties": {
+        "countryCode": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "adminLevel1": { "type": "string", "minLength": 1 },
+        "adminLevel2": { "type": ["string", "null"] },
+        "locality": { "type": ["string", "null"] }
+      }
+    },
+    "discoveredFromUrl": { "type": "string", "format": "uri" },
+    "retrievalTargets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url", "expectedFormatFamily", "expectedRelationship"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "expectedFormatFamily": { "enum": ["pdf", "image", "word", "spreadsheet", "delimited_text", "geospatial", "html", "archive"] },
+          "expectedRelationship": { "enum": ["primary", "corroborating"] }
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approvedAt", "basis"],
+      "properties": {
+        "status": { "const": "approved" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "basis": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

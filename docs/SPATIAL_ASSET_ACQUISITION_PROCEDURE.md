@@ -41,6 +41,8 @@ been found. Search every category independently:
 - wetlands, mangroves, waterways, shorelines, floodplains and buffers;
 - government residential, commercial and industrial layouts;
 - government estates, plantations, farms and agricultural schemes;
+- government tourism, leisure, cultural and civic assets, including resorts,
+  convention centres, stadia, museums, waterfronts and their wider compounds;
 - acquired land for housing, airports, ports, rail, roads, schools, hospitals,
   utilities and institutions;
 - road, pipeline, transmission, drainage and other rights-of-way;
@@ -51,7 +53,10 @@ been found. Search every category independently:
 
 Store canonical and alternative names, class, authority, location, legal status,
 instrument/plan references, stated area, source/file URLs, acquisition status,
-missing material and check eligibility. Report inventory counts by category. A
+missing material, encroachment/fraud exposure, acquisition priority and check
+eligibility. Urban government assets exposed to informal occupation or nearby
+private sales must be treated as high priority even when they are not legally
+called “reserves”. Report inventory counts by category. A
 category with no confirmed result must be recorded as searched, not omitted.
 
 ## 2. Authoritative instruments and datasets
@@ -154,4 +159,3 @@ Each run leaves a database inventory (including unavailable geometry), acquired
 files/checksums where permitted, extraction and analysis records, coordinate-level
 provenance, geometry candidates and validation outcomes, live accepted features,
 automated exclusion/alert tests, and a concise gap/next-action report.
-

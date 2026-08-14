@@ -100,6 +100,10 @@ stale, unavailable, or test-only.
 
 ## 5. Current Development Constraint
 
-Dende does **not currently provide user accounts or authentication**. Until
-authentication and authorization are added, it should be treated as a
-controlled development environment rather than a public production registry.
+Dende now provides basic email/password accounts, contact-verification and
+recovery challenges, revocable server-side sessions, account-owned records,
+organization roles, introductory credits, and commerce foundations. Production
+email delivery, rate limits, abuse controls, privacy/retention enforcement,
+step-up authentication, payment processing, and operational review tooling are
+not complete. Dende should therefore remain a controlled development environment
+rather than a public production registry.

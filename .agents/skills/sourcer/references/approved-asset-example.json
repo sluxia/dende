@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "approved-research-asset/v1",
+  "runKey": "2026-08-14-crossriver",
+  "assetExternalKey": "crs-example-layout-001",
+  "canonicalName": "Example approved layout",
+  "aliases": [],
+  "jurisdiction": {
+    "countryCode": "NG",
+    "adminLevel1": "Cross River",
+    "adminLevel2": null,
+    "locality": "Calabar"
+  },
+  "discoveredFromUrl": "https://example.gov.ng/publications",
+  "retrievalTargets": [
+    {
+      "url": "https://example.gov.ng/files/layout.pdf",
+      "expectedFormatFamily": "pdf",
+      "expectedRelationship": "primary"
+    }
+  ],
+  "approval": {
+    "status": "approved",
+    "approvedAt": "2026-08-14T12:00:00Z",
+    "basis": "explicit-user-instruction"
+  }
+}

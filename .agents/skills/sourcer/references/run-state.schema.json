@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dende.local/schemas/research-run-state-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runKey", "countryCode", "stateKey", "adminLevel1", "status", "startedAt", "updatedAt", "assetCounts", "currentAssetExternalKey"],
+  "properties": {
+    "schemaVersion": { "const": "research-run-state/v1" },
+    "runKey": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+$" },
+    "countryCode": { "type": "string", "pattern": "^[A-Z]{2}$" },
+    "stateKey": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "adminLevel1": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["active", "paused", "completed"] },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": ["string", "null"], "format": "date-time" },
+    "currentAssetExternalKey": { "type": ["string", "null"] },
+    "assetCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inventoried", "researching", "blocked", "completed"],
+      "properties": {
+        "inventoried": { "type": "integer", "minimum": 0 },
+        "researching": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "blocked": { "type": "integer", "minimum": 0 },
+        "completed": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

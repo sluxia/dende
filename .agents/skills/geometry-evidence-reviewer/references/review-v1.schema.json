@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dende.local/schemas/geometry-evidence-review-v1.schema.json",
+  "title": "Dende geometry evidence review v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reviewExternalKey", "assetExternalKey", "candidateExternalKey", "inputAnalysisExternalKey", "inputChecksumSha256", "identity", "reviewedAt", "reviewer", "decision", "activationRecommended", "activationPrerequisites", "coverage", "observationReviews", "gates", "metrics", "limitations", "nextEvidenceNeeded", "validation"],
+  "properties": {
+    "schemaVersion": { "const": "geometry-evidence-review/v1" },
+    "reviewExternalKey": { "type": "string", "minLength": 1 },
+    "assetExternalKey": { "type": "string", "minLength": 1 },
+    "candidateExternalKey": { "type": "string", "minLength": 1 },
+    "inputAnalysisExternalKey": { "type": "string", "minLength": 1 },
+    "inputChecksumSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetMatches", "jurisdictionMatches", "instrumentMatches", "candidateSourcesSupportTarget", "reason"],
+      "properties": {
+        "assetMatches": { "type": "boolean" },
+        "jurisdictionMatches": { "type": "boolean" },
+        "instrumentMatches": { "type": ["boolean", "null"] },
+        "candidateSourcesSupportTarget": { "type": "boolean" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reviewedAt": { "type": "string", "format": "date-time" },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "identifier", "methodVersion"],
+      "properties": {
+        "type": { "enum": ["human", "human_assisted", "automated_precheck"] },
+        "identifier": { "type": "string", "minLength": 1 },
+        "methodVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "decision": { "enum": ["accepted", "ambiguous", "rejected", "needs_corroboration"] },
+    "decisionReason": { "type": "string" },
+    "activationRecommended": { "type": "boolean" },
+    "activationPrerequisites": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tierOneOrTwoEvidence", "approvedAuthorityProvenance", "derivedOrAuthoritativeGeometry", "validTopology", "explicitCoverage", "completeProvenance", "currentOrCurrencyResolved"],
+      "properties": {
+        "tierOneOrTwoEvidence": { "type": "boolean" },
+        "approvedAuthorityProvenance": { "type": "boolean" },
+        "derivedOrAuthoritativeGeometry": { "type": "boolean" },
+        "validTopology": { "type": "boolean" },
+        "explicitCoverage": { "type": "boolean" },
+        "completeProvenance": { "type": "boolean" },
+        "currentOrCurrencyResolved": { "type": "boolean" }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "included", "excluded"],
+      "properties": {
+        "status": { "enum": ["full", "partial", "unknown"] },
+        "included": { "type": "array", "items": { "type": "string" } },
+        "excluded": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "sourceCrs": { "type": ["string", "null"] },
+    "geometryPath": { "type": ["string", "null"] },
+    "observationReviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["observationExternalKey", "status", "sourceLocator", "reason"],
+        "properties": {
+          "observationExternalKey": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["confirmed", "mismatch", "ambiguous", "not_located"] },
+          "sourceLocator": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "minItems": 11,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate", "status", "reason", "evidence"],
+        "properties": {
+          "gate": { "enum": ["provenance", "asset_identity", "observation_fidelity", "crs_semantics", "construction", "geometric_validity", "closure_topology", "area_agreement", "geographic_plausibility", "instrument_currency", "coverage_activation"] },
+          "status": { "enum": ["passed", "failed", "ambiguous", "not_applicable"] },
+          "reason": { "type": "string" },
+          "evidence": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "geometryType": { "type": ["string", "null"] },
+        "vertexCount": { "type": ["integer", "null"], "minimum": 0 },
+        "isValid": { "type": ["boolean", "null"] },
+        "validityReason": { "type": ["string", "null"] },
+        "closureErrorM": { "type": ["number", "null"], "minimum": 0 },
+        "statedAreaSqm": { "type": ["number", "null"], "minimum": 0 },
+        "computedAreaSqm": { "type": ["number", "null"], "minimum": 0 },
+        "areaDifferencePercent": { "type": ["number", "null"], "minimum": 0 },
+        "duplicateVertexCount": { "type": ["integer", "null"], "minimum": 0 },
+        "selfIntersectionCount": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "transformation": {
+      "type": ["object", "null"],
+      "properties": {
+        "sourceCrs": { "type": "string" },
+        "targetCrs": { "const": "EPSG:4326" },
+        "axisOrder": { "type": "string" },
+        "tool": { "type": "string" },
+        "definitionVersion": { "type": "string" },
+        "precision": { "type": "string" }
+      },
+      "required": ["sourceCrs", "targetCrs", "axisOrder", "tool", "definitionVersion", "precision"],
+      "additionalProperties": false
+    },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+    "nextEvidenceNeeded": { "type": "array", "items": { "type": "string" } },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "geojson", "geometry"],
+      "properties": {
+        "schema": { "enum": ["passed", "failed", "not_run"] },
+        "geojson": { "enum": ["passed", "failed", "not_run", "not_applicable"] },
+        "geometry": { "enum": ["passed", "failed", "not_run", "not_applicable"] }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "activationRecommended": { "const": true } }, "required": ["activationRecommended"] },
+      "then": { "properties": { "decision": { "const": "accepted" } }, "required": ["decision"] }
+    },
+    {
+      "if": { "properties": { "decision": { "const": "accepted" } }, "required": ["decision"] },
+      "then": {
+        "properties": {
+          "identity": {
+            "properties": {
+              "assetMatches": { "const": true },
+              "jurisdictionMatches": { "const": true },
+              "candidateSourcesSupportTarget": { "const": true }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

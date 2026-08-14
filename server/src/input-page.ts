@@ -111,7 +111,7 @@ ${renderTopNav("check")}
 
 <div id="tab-upload" class="tab active">
   <div class="card">
-    <h2>Upload a survey plan scan</h2>
+    <h2>Upload a survey plan scan · 2 credits</h2>
     <p class="muted" style="font-size:13px;margin:0 0 10px">Upload a photo/scan of the survey plan (bearing &amp; distance table, coordinate list, or sketch). The vision pipeline reads the boundary, converts it to GPS coordinates, then runs the overlap + zoning checks.</p>
     <input type="file" id="upload-file" accept="image/*" />
     <label class="checkitem" style="margin-top:10px"><input type="checkbox" id="upload-lowconf" /> Register even if low confidence</label>
@@ -131,7 +131,7 @@ ${renderTopNav("check")}
       <p class="muted" style="font-size:12px;margin:8px 0 0">Corridor/reserve zones drawn faintly; your polygon updates as you type.</p>
     </div>
     <div class="card">
-      <h2>Boundary corners</h2>
+      <h2>Boundary corners · 1 credit per check</h2>
       <label for="crs-select">Coordinate system</label>
       <select id="crs-select" onchange="crsChanged()"></select>
       <div class="rowbtns">
@@ -386,7 +386,7 @@ ${renderTopNav("check")}
     try {
       const res = await fetch("/api/plots/from-coordinates", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
         body: JSON.stringify(payload)
       });
       const json = await res.json();
@@ -428,7 +428,7 @@ ${renderTopNav("check")}
     fd.append("image", file);
     submitStatus(st, "Scanning survey plan with the vision model…", "");
     try {
-      const res = await fetch("/api/plots?allowLowConfidence=" + low, { method: "POST", body: fd });
+      const res = await fetch("/api/plots?allowLowConfidence=" + low, { method: "POST", headers: { "idempotency-key": crypto.randomUUID() }, body: fd });
       const json = await res.json();
       if (!res.ok) { submitStatus(st, json.error || "Registration failed.", "error"); return; }
       submitStatus(st, "Registered.", "ok");

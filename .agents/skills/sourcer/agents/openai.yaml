@@ -1,0 +1,4 @@
+interface:
+  display_name: "Source Land Records"
+  short_description: "Research one jurisdiction and asset at a time"
+  default_prompt: "Use $sourcer to select the next unresearched Nigerian jurisdiction and run its controlled sourcing workflow."

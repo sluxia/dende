@@ -62,7 +62,7 @@ interface PlotRow {
  */
 export async function registerPlot(
   imageInput: string | Buffer,
-  options: { sourceFile?: string; allowLowConfidence?: boolean } = {}
+  options: { sourceFile?: string; allowLowConfidence?: boolean; ownerUserId?: string | null } = {}
 ): Promise<RegistrationResult> {
   const result: ParserResult = await parseSurveyImage(imageInput, {
     areaTolerance: config.areaTolerance
@@ -111,10 +111,10 @@ export async function registerPlot(
   const rows = await query<PlotRow>(
     `INSERT INTO registry.plots
        (status, method, confidence, crs, computed_area_sqm, printed_area_sqm, source_file,
-        raw_vertices, geometry, record_type, source_id, import_id)
+        raw_vertices, geometry, record_type, source_id, import_id, owner_user_id, created_by_user_id)
      VALUES
        ($1, $2, $3, $4, $5, $6, $7, $8::jsonb,
-        ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON($9), 4326)), 'survey_submission', $10, $11)
+        ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON($9), 4326)), 'survey_submission', $10, $11, $12, $12)
      RETURNING id, status, method, confidence, crs, computed_area_sqm, printed_area_sqm, source_file, created_at,
                ST_AsGeoJSON(geometry)::jsonb AS geometry`,
     [
@@ -129,6 +129,7 @@ export async function registerPlot(
       JSON.stringify(geometry),
       sourceId,
       importId
+      ,options.ownerUserId ?? null
     ]
   );
   const plotRow = rows[0];
@@ -210,6 +211,7 @@ export async function registerPlotFromCoordinates(
     label?: string;
     register?: boolean;
     recordType?: "manual_submission" | "ownership_notice" | "reference_test";
+    ownerUserId?: string | null;
   } = {}
 ): Promise<ManualPlotResult> {
   if (vertices.length < 3) {
@@ -252,11 +254,11 @@ export async function registerPlotFromCoordinates(
   const rows = await query<PlotRow>(
     `INSERT INTO registry.plots
        (status, method, confidence, crs, computed_area_sqm, printed_area_sqm, source_file,
-        raw_vertices, geometry, record_type, source_id)
+        raw_vertices, geometry, record_type, source_id, owner_user_id, created_by_user_id)
      VALUES
        ('active', 'manual', NULL, $1, $2, NULL, $3, $4::jsonb,
         ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON($5), 4326)), $6,
-        (SELECT id FROM provenance.data_sources WHERE name = $7 ORDER BY created_at ASC LIMIT 1))
+        (SELECT id FROM provenance.data_sources WHERE name = $7 ORDER BY created_at ASC LIMIT 1), $8, $8)
      RETURNING id, status, method, confidence, crs, computed_area_sqm, printed_area_sqm, source_file, created_at,
                ST_AsGeoJSON(geometry)::jsonb AS geometry`,
     [
@@ -267,6 +269,7 @@ export async function registerPlotFromCoordinates(
       JSON.stringify(geometry),
       recordType,
       sourceName
+      ,options.ownerUserId ?? null
     ]
   );
   const plotRow = rows[0];

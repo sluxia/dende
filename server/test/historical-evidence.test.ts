@@ -79,19 +79,137 @@ test("Akwa Ibom general evidence follows mapped discovery and stays out of alert
 test("spatial acquisition campaigns enforce geometry-first execution order",async(t)=>{
   if(!available)return t.skip("PostGIS not reachable");
   const campaigns=await pool.query<{external_key:string;sequence_number:number;status:string;current_stage:string}>(`SELECT external_key,sequence_number,status,current_stage FROM provenance.spatial_acquisition_campaigns ORDER BY sequence_number`);
-  assert.deepEqual(campaigns.rows.map(r=>r.external_key),[
+  assert.deepEqual(campaigns.rows.slice(0,3).map(r=>r.external_key),[
     'ng-cross-river-spatial-rerun-v1','ng-akwa-ibom-spatial-rerun-v1','ng-national-spatial-assets-v1'
   ]);
-  assert.ok(['inventory','validating'].includes(campaigns.rows[0].status));
+  assert.ok(['inventory','validating','paused'].includes(campaigns.rows[0].status));
   assert.ok(['government_inventory','validation'].includes(campaigns.rows[0].current_stage));
-  assert.ok(campaigns.rows.slice(1).every(r=>r.status==='queued'));
+  assert.ok(campaigns.rows.slice(1,3).every(r=>r.status==='queued'));
 
   const inventory=await pool.query<{count:number;eligible:number;with_geometry:number}>(`SELECT count(*)::int count,count(*) FILTER(WHERE check_status='eligible')::int eligible,count(*) FILTER(WHERE geometry IS NOT NULL)::int with_geometry FROM provenance.spatial_asset_inventory WHERE campaign_id=(SELECT id FROM provenance.spatial_acquisition_campaigns WHERE external_key='ng-cross-river-spatial-rerun-v1')`);
-  assert.deepEqual(inventory.rows[0],{count:13,eligible:0,with_geometry:0});
+  assert.ok(inventory.rows[0].count>=23);
+  assert.equal(inventory.rows[0].eligible,0);
+  assert.equal(inventory.rows[0].with_geometry,0);
   assert.rejects(
     pool.query(`INSERT INTO provenance.spatial_asset_inventory(campaign_id,external_key,asset_name,asset_class,country_code,geometry_status,check_status) SELECT id,'test-invalid-eligible','Invalid fixture','other','NG','unavailable','eligible' FROM provenance.spatial_acquisition_campaigns WHERE external_key='ng-cross-river-spatial-rerun-v1'`),
     /check constraint/
   );
+});
+
+test("Cross River inventory includes high-risk urban government assets",async(t)=>{
+  if(!available)return t.skip("PostGIS not reachable");
+  const rows=await pool.query<{external_key:string;risk_priority:number;check_status:string;survey_reference:string|null}>(`SELECT external_key,risk_priority,check_status,survey_reference FROM provenance.spatial_asset_inventory WHERE external_key IN ('crs-asset-tinapa','crs-asset-marina-resort','crs-asset-summit-hills','crs-asset-cicc','crs-asset-summit-hills-monorail-row','crs-asset-calabar-free-trade-zone','crs-asset-obudu-mountain-resort','crs-asset-kwa-falls')`);
+  assert.equal(rows.rows.length,8);
+  assert.ok(rows.rows.every(r=>r.check_status==='excluded'));
+  assert.ok(rows.rows.filter(r=>r.risk_priority===1).length>=6);
+  assert.equal(rows.rows.find(r=>r.external_key==='crs-asset-summit-hills')?.survey_reference,'CR/C 1187');
+});
+
+test("UNIDO Calabar EPZ plan is production evidence but not invented check geometry",async(t)=>{
+  if(!available)return t.skip("PostGIS not reachable");
+  const asset=await pool.query<{
+    stated_area_sqm:string;acquisition_status:string;processing_status:string;
+    geometry_status:string;check_status:string;geometry:boolean;file_url:string|null;
+  }>(`SELECT stated_area_sqm::text,acquisition_status,processing_status,geometry_status,
+             check_status,geometry IS NOT NULL geometry,file_url
+        FROM provenance.spatial_asset_inventory
+       WHERE external_key='crs-asset-calabar-free-trade-zone'`);
+  assert.deepEqual(asset.rows[0],{
+    stated_area_sqm:'1060000',acquisition_status:'downloaded',
+    processing_status:'geometry_found',geometry_status:'located',
+    check_status:'excluded',geometry:false,
+    file_url:'https://downloads.unido.org/ot/49/90/4990556/15001-20000_19569.pdf'
+  });
+
+  const observations=await pool.query<{external_key:string;normalized_values:{hectares:number;assigned?:boolean}}>(
+    `SELECT external_key,normalized_values FROM intelligence.numeric_observations
+      WHERE external_key IN ('crs-calabar-epz-unido-assigned-area-106ha','crs-calabar-epz-unido-proposed-extension-200ha')
+      ORDER BY external_key`
+  );
+  assert.equal(observations.rows.length,2);
+  assert.equal(observations.rows.find(r=>r.external_key.endsWith('106ha'))?.normalized_values.hectares,106);
+  assert.equal(observations.rows.find(r=>r.external_key.endsWith('200ha'))?.normalized_values.assigned,false);
+
+  const source=await pool.query<{status:string;coverage_status:string;access_stage:string;imports:number}>(
+    `SELECT s.status,s.coverage_status,s.access_stage,
+            (SELECT count(*)::int FROM provenance.data_imports i WHERE i.source_id=s.id) imports
+       FROM provenance.data_sources s
+      WHERE s.name='UNIDO Calabar Export Processing Zone feasibility study and plans (1991)'`
+  );
+  assert.deepEqual(source.rows[0],{status:'partial',coverage_status:'unavailable',access_stage:'usable',imports:1});
+});
+
+test("Marina Resort evidence stores state control and a quarantined location point",async(t)=>{
+  if(!available)return t.skip("PostGIS not reachable");
+  const asset=await pool.query<{acquisition_status:string;processing_status:string;geometry_status:string;check_status:string;geometry:boolean}>(
+    `SELECT acquisition_status,processing_status,geometry_status,check_status,geometry IS NOT NULL geometry
+       FROM provenance.spatial_asset_inventory WHERE external_key='crs-asset-marina-resort'`
+  );
+  assert.deepEqual(asset.rows[0],{acquisition_status:'downloaded',processing_status:'geometry_found',geometry_status:'located',check_status:'excluded',geometry:false});
+
+  const point=await pool.query<{normalized_values:{latitude:number;longitude:number;boundaryVertex:boolean}}>(
+    `SELECT normalized_values FROM intelligence.numeric_observations WHERE external_key='crs-marina-resort-reference-point-2023'`
+  );
+  assert.deepEqual(point.rows[0].normalized_values,{latitude:4.966083,longitude:8.318607,role:'location reference',boundaryVertex:false});
+
+  const validation=await pool.query<{outcome:string;observed_values:{featureType:string;buffered:boolean}}>(
+    `SELECT outcome,observed_values FROM provenance.spatial_validation_events
+      WHERE candidate_reference='AJHTL 2023 Table 1 Point 8'`
+  );
+  assert.equal(validation.rows[0].outcome,'failed');
+  assert.equal(validation.rows[0].observed_values.featureType,'point');
+  assert.equal(validation.rows[0].observed_values.buffered,false);
+});
+
+test("Obudu resort stays separate from its federal road ROW and Becheve reserve",async(t)=>{
+  if(!available)return t.skip("PostGIS not reachable");
+  const rows=await pool.query<{external_key:string;asset_class:string;geometry_status:string;check_status:string;geometry:boolean}>(
+    `SELECT external_key,asset_class,geometry_status,check_status,geometry IS NOT NULL geometry
+       FROM provenance.spatial_asset_inventory
+      WHERE external_key IN ('crs-asset-obudu-mountain-resort','crs-asset-obudu-cattle-ranch-road-row','crs-asset-becheve-nature-reserve')
+      ORDER BY external_key`
+  );
+  assert.equal(rows.rows.length,3);
+  assert.equal(rows.rows.find(r=>r.external_key.endsWith('road-row'))?.asset_class,'transport_right_of_way');
+  assert.equal(rows.rows.find(r=>r.external_key.endsWith('nature-reserve'))?.asset_class,'conservation_area');
+  assert.ok(rows.rows.every(r=>r.check_status==='excluded'&&!r.geometry));
+
+  const gazette=await pool.query<{metadata:{beaconCount:number;declaredCrs:string};extraction_status:string}>(
+    `SELECT metadata,extraction_status FROM intelligence.document_assets WHERE external_key='ng-2019-obudu-cattle-ranch-road-row-pdf'`
+  );
+  assert.equal(gazette.rows[0].metadata.beaconCount,262);
+  assert.equal(gazette.rows[0].metadata.declaredCrs,'EPSG:32632');
+  assert.equal(gazette.rows[0].extraction_status,'review_required');
+
+  const validation=await pool.query<{outcome:string;observed_values:{automatedRowsAccepted:number;geometryCreated:boolean}}>(
+    `SELECT outcome,observed_values FROM provenance.spatial_validation_events WHERE candidate_reference='S.I. No. 58 of 2019 / ZRW2-001-ZRW2-262'`
+  );
+  assert.equal(validation.rows[0].outcome,'inconclusive');
+  assert.equal(validation.rows[0].observed_values.automatedRowsAccepted,0);
+  assert.equal(validation.rows[0].observed_values.geometryCreated,false);
+});
+
+test("spatial worker queue exposes stored assets one at a time while inventory is open",async(t)=>{
+  if(!available)return t.skip("PostGIS not reachable");
+  config.intelligenceIngestionKey='test-worker-key';
+  const response=await app.inject({method:'GET',url:'/api/internal/spatial-assets/queue?limit=1',headers:{'x-dende-ingestion-key':'test-worker-key'}});
+  assert.equal(response.statusCode,200);
+  const body=response.json() as {inventoryOpen:boolean;assets:Array<{externalKey:string;riskPriority:number;processingStatus:string}>};
+  assert.equal(body.inventoryOpen,true);
+  assert.equal(body.assets.length,1);
+  assert.equal(body.assets[0].riskPriority,1);
+  assert.equal(body.assets[0].processingStatus,'queued');
+});
+
+test("public asset inventory appears in sources without becoming check eligible",async(t)=>{
+  if(!available)return t.skip("PostGIS not reachable");
+  const response=await app.inject({method:'GET',url:'/api/sources'});
+  assert.equal(response.statusCode,200);
+  const body=response.json() as {assets:Array<{name:string;visibility:string;checkStatus:string}>};
+  assert.ok(body.assets.length>=49);
+  assert.ok(body.assets.some(asset=>asset.name.includes('Tinapa')));
+  assert.ok(body.assets.every(asset=>asset.visibility==='public'));
+  assert.ok(body.assets.every(asset=>asset.checkStatus==='excluded'));
 });
 
 test("point-only protected-area records fail boundary validation",async(t)=>{
@@ -130,11 +248,12 @@ test("discovery supports at least six file families and quarantines numeric extr
   assert.ok(profiles.rows.length>=6);
   assert.ok(["pdf","image","word","spreadsheet","delimited","geospatial","html","archive"].every(f=>profiles.rows.some(p=>p.format_family===f)));
   assert.ok(profiles.rows.find(p=>p.format_family==="geospatial")!.extensions.includes("kml"));
-  const assets=await pool.query<{format_family:string;acquisition_status:string;extraction_status:string}>(`SELECT format_family,acquisition_status,extraction_status FROM intelligence.document_assets`);
+  const assets=await pool.query<{format_family:string;acquisition_status:string;extraction_status:string;metadata:{failure?:string}}>(`SELECT format_family,acquisition_status,extraction_status,metadata FROM intelligence.document_assets`);
   assert.ok(assets.rows.length>=4);
-  assert.ok(assets.rows.every(a=>["discovered","downloaded"].includes(a.acquisition_status)));
+  assert.ok(assets.rows.every(a=>["discovered","queued","downloaded","failed","blocked"].includes(a.acquisition_status)));
   assert.ok(assets.rows.some(a=>a.acquisition_status==="downloaded"&&["text_extracted","complete"].includes(a.extraction_status)));
-  assert.ok(assets.rows.every(a=>["pending","text_extracted","review_required","complete"].includes(a.extraction_status)));
+  assert.ok(assets.rows.every(a=>["pending","text_extracted","ocr_required","ocr_complete","review_required","complete","failed"].includes(a.extraction_status)));
+  assert.ok(assets.rows.filter(a=>a.acquisition_status==="failed").every(a=>Boolean(a.metadata.failure)));
 });
 
 test("Cross River expanded discovery pass persists more than the original four events",async(t)=>{

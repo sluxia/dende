@@ -59,6 +59,7 @@ export interface PlotMapData {
   ownershipNotices: OwnershipNotice[];
   ownershipHistory: Record<string, OwnershipEvent[]>;
   consultedSources: ConsultedSource[];
+  latestReportId: string | null;
   overlaps: PlotMapOverlap[];
   alerts: PlotMapAlert[];
 }
@@ -170,6 +171,7 @@ export function renderPlotMapHtml(data: PlotMapData): string {
   .badge.st-false_positive { background: #e5e7eb; color: #4b5563; }
   .plot-summary td { padding: 2px 0; font-size: 12px; }
   .plot-summary td:first-child { color: #6b7280; padding-right: 10px; }
+  .report-action{margin:10px 0}.report-action a,.report-action button{display:block;width:100%;box-sizing:border-box;border:0;border-radius:8px;padding:9px 12px;background:#193f2b;color:#fff;text-decoration:none;text-align:center;font-weight:750;cursor:pointer}
   .legend { background: #fff; padding: 6px 10px; border-radius: 6px; font-size: 11px; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
   .legend div { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
   .swatch { width: 14px; height: 14px; display: inline-block; border-radius: 3px; flex: none; }
@@ -193,6 +195,7 @@ ${renderTopNav("registry")}
   <div id="panel">
     <h1>Plot ${esc(data.plot.id.slice(0, 8))}</h1>
     <div class="sub">${esc(data.plot.sourceFile ?? "")} · registered ${esc(data.plot.createdAt ?? "")}</div>
+    <div class="report-action">${data.latestReportId?`<a href="/reports/${esc(data.latestReportId)}">Open permanent evidence report</a>`:`<form method="post" action="/api/plots/${esc(data.plot.id)}/reports"><button type="submit">Create permanent evidence report</button></form>`}</div>
     <table class="plot-summary">
       <tr><td>Status</td><td><b>${esc(data.plot.status)}</b></td></tr>
       <tr><td>Method</td><td>${esc(data.plot.method ?? "—")} (${data.plot.confidence != null ? data.plot.confidence.toFixed(0) + "%" : "—"})</td></tr>

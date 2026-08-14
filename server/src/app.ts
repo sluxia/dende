@@ -9,7 +9,7 @@ import { renderViolationPageHtml, ViolationEvent, CheckRun } from "./violation-p
 import { renderViewerHtml, ViewerPlot, ViewerOverlap } from "./viewer";
 import { fetchZoneLayers } from "./zones";
 import { renderInputPageHtml } from "./input-page";
-import { renderSourcesPageHtml, SourceSummary } from "./sources-page";
+import { renderSourcesPageHtml, SourceSummary, SpatialAssetSummary } from "./sources-page";
 import { renderProtectPageHtml } from "./protect-page";
 import { ImportDetail, renderImportDetailHtml, renderSourceDetailHtml, SourceDetail } from "./source-detail-page";
 import { createOwnershipNotice, noticesForPlots, ownershipHistoryForNotices, createOwnershipRequest, publicRequestsForNotice, withdrawOwnershipNotice, OwnershipNotice } from "./ownership";
@@ -18,6 +18,17 @@ import { collectConsultedSources, ConsultedSource } from "./check-evidence";
 import { EvidenceDocument, LandEvidenceDetail, LandEvidenceSummary, renderResearchDetailHtml, renderResearchPageHtml } from "./research-page";
 import { CRS_NAMES } from "@sluxia/dende-core";
 import { ingestAnalysis, AnalysisIngestionInput } from "./analysis-ingestion";
+import { createEvidenceReport, fetchEvidenceReport, renderEvidenceReportHtml } from "./reports";
+import { createAccount, loginAccount, currentAccount, logoutAccount, parseSessionCookie, sessionCookie, clearSessionCookie, issueChallenge, verifyEmail, resetPassword } from "./accounts";
+import { renderAccountPage, renderAuthPage } from "./account-page";
+import { renderTopNav, TOP_NAV_CSS } from "./nav";
+import { renderRecoveryRequestPage, renderTokenPage } from "./recovery-page";
+import { createOrganization, organizationsForUser, inviteMember, acceptInvitation, transferPlotToOrganization } from "./organizations";
+import { staffProfile, systemAccessFor, SystemPermission } from "./staff-auth";
+import { completeReservation, creditsForUser, releaseExpiredReservations, reserveUserCredits } from "./credits";
+import { publicCatalog } from "./catalog";
+import { acceptedLocales, messagesForLocale, resolveLocale, updateUserPreferences } from "./localization";
+import { createPricedOrder, ordersForUser } from "./commerce";
 import {
   PlotMapAlert,
   PlotMapData,
@@ -83,16 +94,16 @@ export function buildApp(): FastifyInstance {
     return { status: "ok", database: "up" };
   });
 
-  const requireIntelligenceWorker = (request: { headers: Record<string, unknown> }, reply: { code: (status: number) => { send: (body: unknown) => unknown } }): unknown | undefined => {
-    if (!config.intelligenceIngestionKey) return reply.code(503).send({ error: "Intelligence worker API is not configured." });
-    if (request.headers["x-dende-ingestion-key"] !== config.intelligenceIngestionKey) return reply.code(401).send({ error: "Invalid intelligence worker credential." });
-    return undefined;
+  const requireInternal = async (request: Parameters<typeof systemAccessFor>[0], reply: { code: (status: number) => { send: (body: unknown) => unknown } },permission:SystemPermission):Promise<boolean> => {
+    const access=await systemAccessFor(request,permission);
+    if(access.allowed)return true;
+    reply.code(access.statusCode??403).send({error:access.error});
+    return false;
   };
 
   /** Worker queue: assets discovered across every enabled file family but not yet acquired. */
   app.get("/api/internal/intelligence/assets/queue", async (request, reply) => {
-    const rejected = requireIntelligenceWorker(request, reply);
-    if (rejected) return rejected;
+    if(!await requireInternal(request,reply,"intelligence.write"))return;
     const assets = await query(
       `SELECT a.external_key AS "assetExternalKey",a.file_url AS "fileUrl",a.discovered_from_url AS "discoveredFromUrl",
               a.filename,a.format_family AS "formatFamily",a.file_extension AS "fileExtension",a.media_type AS "mediaType",
@@ -106,10 +117,29 @@ export function buildApp(): FastifyInstance {
     return { assets };
   });
 
+  /** Geometry-first campaign queue. Inventory closes before workers claim one asset at a time. */
+  app.get<{Querystring:{campaign?:string;limit?:string}}>("/api/internal/spatial-assets/queue", async (request, reply) => {
+    if(!await requireInternal(request,reply,"intelligence.write"))return;
+    const campaign=request.query.campaign??'ng-cross-river-spatial-rerun-v1';
+    const limit=Math.max(1,Math.min(25,Number(request.query.limit)||1));
+    const campaignRow=await queryOne<{status:string;current_stage:string}>(`SELECT status,current_stage FROM provenance.spatial_acquisition_campaigns WHERE external_key=$1`,[campaign]);
+    if(!campaignRow)return reply.code(404).send({error:'Campaign not found'});
+    const assets=await query(
+      `SELECT a.external_key AS "externalKey",a.asset_name AS "assetName",a.alternate_names AS "alternateNames",
+              a.asset_class AS "assetClass",a.authority_name AS "authorityName",a.admin_level_2 AS "adminLevel2",a.locality,
+              a.legal_status AS "legalStatus",a.source_url AS "sourceUrl",a.risk_priority AS "riskPriority",
+              a.risk_reason AS "riskReason",a.processing_status AS "processingStatus",a.acquisition_status AS "acquisitionStatus",
+              a.missing_material AS "missingMaterial",a.next_action AS "nextAction"
+         FROM provenance.spatial_asset_inventory a
+         JOIN provenance.spatial_acquisition_campaigns c ON c.id=a.campaign_id
+        WHERE c.external_key=$1 AND a.processing_status='queued'
+        ORDER BY a.risk_priority,a.created_at,a.asset_name LIMIT $2`,[campaign,limit]);
+    return {campaign,status:campaignRow.status,currentStage:campaignRow.current_stage,inventoryOpen:campaignRow.current_stage==='government_inventory',assets};
+  });
+
   /** Discovery intake used by a crawler/research worker; storing a URL does not make it evidence. */
   app.post("/api/internal/intelligence/assets/discover", async (request, reply) => {
-    const rejected = requireIntelligenceWorker(request, reply);
-    if (rejected) return rejected;
+    if(!await requireInternal(request,reply,"intelligence.write"))return;
     const body = (request.body ?? {}) as Record<string, unknown>;
     const required = ["externalKey","fileUrl","formatFamily"] as const;
     for (const field of required) if (typeof body[field] !== "string" || !(body[field] as string).trim()) return reply.code(400).send({ error: `${field} is required.` });
@@ -129,8 +159,7 @@ export function buildApp(): FastifyInstance {
 
   /** Records acquisition without accepting file bytes; durable object storage remains the worker's responsibility. */
   app.patch<{Params:{externalKey:string}}>("/api/internal/intelligence/assets/:externalKey/acquisition", async (request, reply) => {
-    const rejected = requireIntelligenceWorker(request, reply);
-    if (rejected) return rejected;
+    if(!await requireInternal(request,reply,"intelligence.write"))return;
     const body = (request.body ?? {}) as Record<string, unknown>;
     if (!['queued','downloaded','failed','blocked'].includes(String(body.status))) return reply.code(400).send({ error: "Invalid acquisition status." });
     const row = await queryOne<{id:string}>(
@@ -147,8 +176,7 @@ export function buildApp(): FastifyInstance {
 
   /** Receives a completed, versioned model analysis and persists every coordinate with provenance. */
   app.post("/api/internal/intelligence/analyses", async (request, reply) => {
-    const rejected = requireIntelligenceWorker(request, reply);
-    if (rejected) return rejected;
+    if(!await requireInternal(request,reply,"intelligence.write"))return;
     try {
       const result = await ingestAnalysis(request.body as AnalysisIngestionInput);
       return reply.code(result.created ? 201 : 200).send(result);
@@ -161,8 +189,7 @@ export function buildApp(): FastifyInstance {
 
   /** Human-review queue. Candidates remain excluded from spatial checks until explicitly validated. */
   app.get("/api/internal/intelligence/review-queue", async (request, reply) => {
-    const rejected = requireIntelligenceWorker(request, reply);
-    if (rejected) return rejected;
+    if(!await requireInternal(request,reply,"intelligence.review"))return;
     const candidates = await query(
       `SELECT gc.id,gc.external_key AS "externalKey",gc.method,gc.source_crs AS "sourceCrs",gc.confidence,
               gc.validation_status AS "validationStatus",gc.check_eligible AS "checkEligible",
@@ -275,6 +302,11 @@ export function buildApp(): FastifyInstance {
    * ?allowLowConfidence=true registers best-effort (failed) parses.
    */
   app.post("/api/plots", async (request, reply) => {
+    const account=await currentAccount(parseSessionCookie(request.headers.cookie));
+    if(!account)return reply.code(401).send({error:"Sign in to scan and check a survey plan."});
+    if(account.emailVerificationStatus!=="verified")return reply.code(403).send({error:"Verify your email before running a scan check."});
+    const idempotencyKey=String(request.headers["idempotency-key"]??"").trim();
+    if(!idempotencyKey)return reply.code(400).send({error:"An Idempotency-Key header is required."});
     const { allowLowConfidence } = request.query as { allowLowConfidence?: string };
     if (!request.isMultipart()) {
       return reply.code(400).send({ error: "Expected multipart/form-data upload." });
@@ -299,19 +331,25 @@ export function buildApp(): FastifyInstance {
     }
     const filePath = await saveUpload(buffer, data.filename ?? "scan.png");
 
+    let reservation:{id:string;quantity:number;productKey:string};
+    try{reservation=await reserveUserCredits({userId:account.id,productKey:"survey-plan-scan-check",relatedReference:data.filename??undefined,idempotencyKey:`scan:${account.id}:${idempotencyKey}`});}
+    catch(error){return reply.code(error instanceof Error&&error.message==="Insufficient credits."?402:403).send({error:error instanceof Error?error.message:"Credit reservation failed."});}
     let result;
     try {
       result = await registerPlot(filePath, {
         sourceFile: data.filename ?? null,
-        allowLowConfidence: allowLowConfidence === "true"
+        allowLowConfidence: allowLowConfidence === "true",
+        ownerUserId: account?.id ?? null
       });
     } catch (error) {
+      await completeReservation(reservation.id,"release",`release:${reservation.id}`);
       if (error instanceof RegistrationError) {
         return reply.code(error.statusCode).send({ error: error.message });
       }
       throw error;
     }
-    return reply.code(201).send(result);
+    await completeReservation(reservation.id,"consume",`consume:${reservation.id}`);
+    return reply.code(201).send({...result,creditCharge:{quantity:reservation.quantity,productKey:reservation.productKey}});
   });
 
   /** Runs overlap + zoning checks against an already-converted GeoJSON geometry. */
@@ -336,6 +374,7 @@ export function buildApp(): FastifyInstance {
    * is persisted exactly like an image-scan registration.
    */
   app.post("/api/plots/from-coordinates", async (request, reply) => {
+    const account=await currentAccount(parseSessionCookie(request.headers.cookie));
     const body = (request.body ?? {}) as {
       vertices?: unknown;
       crs?: unknown;
@@ -364,6 +403,17 @@ export function buildApp(): FastifyInstance {
       return reply.code(400).send({ error: "Each vertex must be an [x, y] pair of numbers." });
     }
 
+    const isProtection=body.protect===true;
+    let reservation:{id:string;quantity:number;productKey:string}|null=null;
+    if(!isProtection){
+      if(!account)return reply.code(401).send({error:"Sign in to run a preliminary plot check."});
+      if(account.emailVerificationStatus!=="verified")return reply.code(403).send({error:"Verify your email before running a plot check."});
+      const idempotencyKey=String(request.headers["idempotency-key"]??"").trim();
+      if(!idempotencyKey)return reply.code(400).send({error:"An Idempotency-Key header is required."});
+      try{reservation=await reserveUserCredits({userId:account.id,productKey:"manual-preliminary-check",relatedReference:typeof body.label==="string"?body.label:undefined,idempotencyKey:`manual:${account.id}:${idempotencyKey}`});}
+      catch(error){return reply.code(error instanceof Error&&error.message==="Insufficient credits."?402:403).send({error:error instanceof Error?error.message:"Credit reservation failed."});}
+    }
+
     try {
       const result = await registerPlotFromCoordinates(
         vertices as [number, number][],
@@ -371,7 +421,8 @@ export function buildApp(): FastifyInstance {
         {
           register: body.register === true || body.register === "true",
           label: typeof body.label === "string" && body.label.length > 0 ? body.label : undefined,
-          recordType: body.protect === true ? "ownership_notice" : "manual_submission"
+          recordType: body.protect === true ? "ownership_notice" : "manual_submission",
+          ownerUserId: account?.id ?? null
         }
       );
       let ownershipNotice = null;
@@ -384,16 +435,20 @@ export function buildApp(): FastifyInstance {
           submitterName: typeof body.submitterName === "string" ? body.submitterName.slice(0, 160) : null,
           contactReference: typeof body.contactReference === "string" ? body.contactReference.slice(0, 240) : null,
           statement: typeof body.statement === "string" ? body.statement.slice(0, 1000) : null,
-          visibility
+          visibility,
+          ownerUserId: account?.id ?? null
         });
       }
       const overlapOwnershipNotices = await noticesForPlots(result.overlaps.map((overlap) => overlap.plotId));
+      if(reservation)await completeReservation(reservation.id,"consume",`consume:${reservation.id}`);
       return reply.code(result.registered ? 201 : 200).send({
         ...result,
         ownershipNotice,
-        overlapOwnershipNotices
+        overlapOwnershipNotices,
+        creditCharge:reservation?{quantity:reservation.quantity,productKey:reservation.productKey}:null
       });
     } catch (error) {
+      if(reservation)await completeReservation(reservation.id,"release",`release:${reservation.id}`);
       if (error instanceof RegistrationError) {
         return reply.code(error.statusCode).send({ error: error.message });
       }
@@ -438,11 +493,22 @@ export function buildApp(): FastifyInstance {
     }));
   }
 
-  app.get("/api/sources", async () => ({ sources: await fetchSourceSummaries() }));
+  async function fetchVisibleSpatialAssets(): Promise<SpatialAssetSummary[]> {
+    const rows = await query<{id:string;asset_name:string;asset_class:string;authority_name:string|null;admin_level_1:string|null;admin_level_2:string|null;locality:string|null;processing_status:string;geometry_status:string;check_status:string;visibility:string;source_url:string|null}>(
+      `SELECT id,asset_name,asset_class,authority_name,admin_level_1,admin_level_2,locality,
+              processing_status,geometry_status,check_status,visibility,source_url
+         FROM provenance.spatial_asset_inventory
+        WHERE visibility='public'
+        ORDER BY admin_level_1 NULLS LAST,risk_priority,asset_class,asset_name`
+    );
+    return rows.map(row=>({id:row.id,name:row.asset_name,assetClass:row.asset_class,authorityName:row.authority_name,adminLevel1:row.admin_level_1,adminLevel2:row.admin_level_2,locality:row.locality,processingStatus:row.processing_status,geometryStatus:row.geometry_status,checkStatus:row.check_status,visibility:row.visibility,sourceUrl:row.source_url}));
+  }
+
+  app.get("/api/sources", async () => ({ sources: await fetchSourceSummaries(), assets: await fetchVisibleSpatialAssets() }));
 
   app.get("/sources", async (_request, reply) => {
     reply.header("content-type", "text/html; charset=utf-8");
-    return reply.send(renderSourcesPageHtml(await fetchSourceSummaries()));
+    return reply.send(renderSourcesPageHtml(await fetchSourceSummaries(), await fetchVisibleSpatialAssets()));
   });
 
   async function fetchLandEvidence(): Promise<LandEvidenceSummary[]> {
@@ -479,6 +545,44 @@ export function buildApp(): FastifyInstance {
   app.get<{Params:{id:string}}>("/research/:id",async(request,reply)=>{if(!validUuid(request.params.id))return reply.code(404).send({error:"Evidence record not found."});const event=await fetchLandEvidenceDetail(request.params.id);if(!event)return reply.code(404).send({error:"Evidence record not found."});reply.header("content-type","text/html; charset=utf-8");return reply.send(renderResearchDetailHtml(event));});
 
   const validUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+  const requestAccount=(request:{headers:{cookie?:string}})=>currentAccount(parseSessionCookie(request.headers.cookie));
+  const authMessages=async(request:{headers:{"accept-language"?:string}})=>{const context=await resolveLocale({requested:acceptedLocales(request.headers["accept-language"])});return{...context,messages:await messagesForLocale(context.locale,["auth.signup.heading","auth.signup.lead","auth.signup.submit","auth.login.heading","auth.login.lead","auth.login.submit"])};};
+  app.get("/signup",async(request,reply)=>{const localized=await authMessages(request);reply.header("content-type","text/html; charset=utf-8");return reply.send(renderAuthPage("signup",localized.messages,localized.locale));});
+  app.get("/login",async(request,reply)=>{const localized=await authMessages(request);reply.header("content-type","text/html; charset=utf-8");return reply.send(renderAuthPage("login",localized.messages,localized.locale));});
+  app.get("/forgot-password",async(_request,reply)=>{reply.header("content-type","text/html; charset=utf-8");return reply.send(renderRecoveryRequestPage());});
+  app.get("/verify-email",async(request,reply)=>{const token=String((request.query as {token?:string}).token??"");reply.header("content-type","text/html; charset=utf-8");return reply.send(renderTokenPage("verify",token));});
+  app.get("/reset-password",async(request,reply)=>{const token=String((request.query as {token?:string}).token??"");reply.header("content-type","text/html; charset=utf-8");return reply.send(renderTokenPage("reset",token));});
+  app.get("/account",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.redirect("/login");const credits=await creditsForUser(user.id);reply.header("content-type","text/html; charset=utf-8");return reply.send(renderAccountPage(user,credits?.balance??null));});
+  app.get("/api/account/me",async(request,reply)=>{const user=await requestAccount(request);return user?reply.send({user}):reply.code(401).send({error:"Not signed in."});});
+  app.get("/api/account/credits",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.code(401).send({error:"Not signed in."});const credits=await creditsForUser(user.id);return reply.send(credits??{walletId:null,balance:null,eligibility:"Verify an email identity to receive introductory credits."});});
+  app.get("/api/catalog",async(request,reply)=>{const q=request.query as {market?:string;locale?:string};const headerLocale=String(request.headers["accept-language"]??"").split(",")[0].trim();const requestedLocale=q.locale??(headerLocale||undefined);const catalog=await publicCatalog((q.market??"NG").toUpperCase(),requestedLocale);return catalog?reply.send(catalog):reply.code(404).send({error:"Active market not found."});});
+  app.get("/api/localization/context",async(request,reply)=>{const user=await requestAccount(request);const q=request.query as {market?:string;organizationId?:string};try{return reply.send(await resolveLocale({marketKey:(q.market??"NG").toUpperCase(),requested:acceptedLocales(request.headers["accept-language"]),userId:user?.id,organizationId:q.organizationId}));}catch(error){return reply.code(404).send({error:error instanceof Error?error.message:"Localization context unavailable."});}});
+  app.patch("/api/account/preferences",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.code(401).send({error:"Not signed in."});const body=(request.body??{}) as {locale?:unknown;timezone?:unknown};if(body.locale!==undefined&&typeof body.locale!=="string"||body.timezone!==undefined&&typeof body.timezone!=="string")return reply.code(400).send({error:"locale and timezone must be strings."});try{return reply.send({preferences:await updateUserPreferences(user.id,{locale:body.locale as string|undefined,timezone:body.timezone as string|undefined})});}catch(error){return reply.code(400).send({error:error instanceof Error?error.message:"Preference update failed."});}});
+  app.get("/api/account/orders",async(request,reply)=>{const user=await requestAccount(request);return user?reply.send({orders:await ordersForUser(user.id)}):reply.code(401).send({error:"Not signed in."});});
+  app.post("/api/orders",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.code(401).send({error:"Sign in before creating an order."});if(user.emailVerificationStatus!=="verified")return reply.code(403).send({error:"Verify your email before creating an order."});const key=String(request.headers["idempotency-key"]??"").trim(),body=(request.body??{}) as {productKey?:unknown;market?:unknown};if(!key||typeof body.productKey!=="string")return reply.code(400).send({error:"productKey and an Idempotency-Key header are required."});const context=await resolveLocale({marketKey:typeof body.market==="string"?body.market:"NG",userId:user.id,requested:acceptedLocales(request.headers["accept-language"])});try{return reply.code(201).send({order:await createPricedOrder({userId:user.id,productKey:body.productKey,marketKey:typeof body.market==="string"?body.market:"NG",locale:context.locale,idempotencyKey:`order:${user.id}:${key}`})});}catch(error){return reply.code(422).send({error:error instanceof Error?error.message:"Order creation failed."});}});
+  app.get("/api/internal/staff/me",async(request,reply)=>{if(!await requireInternal(request,reply,"internal.read"))return;const user=await requestAccount(request);if(!user)return reply.code(400).send({error:"Worker credentials do not have an account profile."});return reply.send({user,staff:await staffProfile(user.id)});});
+  app.post("/api/internal/credits/release-expired",async(request,reply)=>{if(!await requireInternal(request,reply,"credits.manage"))return;const limit=Number((request.body as {limit?:unknown}|null)?.limit);return reply.send(await releaseExpiredReservations({limit:Number.isFinite(limit)?limit:100}));});
+  app.post("/api/account/signup",async(request,reply)=>{const b=(request.body??{}) as Record<string,unknown>;if(typeof b.email!=="string"||typeof b.password!=="string")return reply.code(400).send({error:"Email and password are required."});try{const token=await createAccount({email:b.email,password:b.password,displayName:typeof b.displayName==="string"?b.displayName:null,userAgent:request.headers["user-agent"]??null,ipAddress:request.ip});reply.header("set-cookie",sessionCookie(token,request.protocol==="https"));return reply.code(201).send({ok:true});}catch(e){return reply.code(400).send({error:e instanceof Error?e.message:"Account creation failed."});}});
+  app.post("/api/account/login",async(request,reply)=>{const b=(request.body??{}) as Record<string,unknown>;if(typeof b.email!=="string"||typeof b.password!=="string")return reply.code(400).send({error:"Email and password are required."});const token=await loginAccount(b.email,b.password,request.headers["user-agent"]??null,request.ip);if(!token)return reply.code(401).send({error:"Invalid email or password."});reply.header("set-cookie",sessionCookie(token,request.protocol==="https"));return reply.send({ok:true});});
+  app.post("/api/account/logout",async(request,reply)=>{await logoutAccount(parseSessionCookie(request.headers.cookie));reply.header("set-cookie",clearSessionCookie(request.protocol==="https"));return reply.send({ok:true});});
+  app.post("/api/account/verification/request",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.code(401).send({error:"Sign in first."});try{return reply.send(await issueChallenge({type:"verify_identity",userId:user.id,origin:`${request.protocol}://${request.headers.host}`}));}catch(e){return reply.code(429).send({error:e instanceof Error?e.message:"Try again later."});}});
+  app.post("/api/account/verify",async(request,reply)=>{const token=(request.body as {token?:unknown})?.token;if(typeof token!=="string"||!await verifyEmail(token))return reply.code(400).send({error:"This verification link is invalid or expired."});return reply.send({ok:true});});
+  app.post("/api/account/recovery/request",async(request,reply)=>{const email=(request.body as {email?:unknown})?.email;if(typeof email!=="string")return reply.code(400).send({error:"Email is required."});try{return reply.send(await issueChallenge({type:"recover_account",email,origin:`${request.protocol}://${request.headers.host}`}));}catch{return reply.send({accepted:true,developmentUrl:null});}});
+  app.post("/api/account/recovery/reset",async(request,reply)=>{const b=(request.body??{}) as {token?:unknown;password?:unknown};if(typeof b.token!=="string"||typeof b.password!=="string")return reply.code(400).send({error:"Token and new password are required."});try{if(!await resetPassword(b.token,b.password))return reply.code(400).send({error:"This recovery link is invalid or expired."});reply.header("set-cookie",clearSessionCookie(request.protocol==="https"));return reply.send({ok:true});}catch(e){return reply.code(400).send({error:e instanceof Error?e.message:"Reset failed."});}});
+
+  app.post<{Params:{id:string}}>("/api/plots/:id/reports",async(request,reply)=>{if(!validUuid(request.params.id))return reply.code(404).send({error:"Plot not found."});const account=await requestAccount(request);const plot=await queryOne<{owner_user_id:string|null}>(`SELECT owner_user_id FROM registry.plots WHERE id=$1`,[request.params.id]);if(!plot)return reply.code(404).send({error:"Plot not found."});if(plot.owner_user_id&&plot.owner_user_id!==account?.id)return reply.code(403).send({error:"Only the record owner can generate a new report."});const report=await createEvidenceReport(request.params.id,account?.id??null);if(!report)return reply.code(422).send({error:"A completed check is required before generating a report."});if(String(request.headers.accept??"").includes("text/html"))return reply.redirect(`/reports/${report.id}`);return reply.code(201).send({report,url:`/reports/${report.id}`,downloadUrl:`/reports/${report.id}/download`});});
+  app.get("/api/account/records",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.code(401).send({error:"Not signed in."});const [plots,reports,notices]=await Promise.all([query(`SELECT id,status,record_type,computed_area_sqm,created_at::text FROM registry.plots WHERE owner_user_id=$1 ORDER BY created_at DESC`,[user.id]),query(`SELECT id,report_number,plot_id,generated_at::text FROM registry.evidence_reports WHERE owner_user_id=$1 ORDER BY generated_at DESC`,[user.id]),query(`SELECT id,plot_id,ownership_status,verification_level,status,submitted_at::text FROM registry.ownership_notices WHERE owner_user_id=$1 ORDER BY submitted_at DESC`,[user.id])]);return reply.send({plots,reports,ownershipNotices:notices});});
+  app.get("/api/account/organizations",async(request,reply)=>{const user=await requestAccount(request);return user?reply.send({organizations:await organizationsForUser(user.id)}):reply.code(401).send({error:"Not signed in."});});
+  app.post("/api/account/organizations",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.code(401).send({error:"Not signed in."});const name=(request.body as {name?:unknown})?.name;if(typeof name!=="string"||name.trim().length<2)return reply.code(400).send({error:"Organization name is required."});return reply.code(201).send({organization:await createOrganization(user.id,name)});});
+  app.post<{Params:{id:string}}>("/api/organizations/:id/invitations",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.code(401).send({error:"Not signed in."});const b=(request.body??{}) as {email?:unknown;role?:unknown};if(typeof b.email!=="string"||typeof b.role!=="string")return reply.code(400).send({error:"Email and role are required."});try{const item=await inviteMember(user.id,request.params.id,b.email,b.role,`${request.protocol}://${request.headers.host}`);return item?reply.code(201).send({invitation:item}):reply.code(403).send({error:"Permission denied."});}catch{return reply.code(400).send({error:"Invalid invitation role or email."});}});
+  app.post("/api/organization-invitations/accept",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.code(401).send({error:"Sign in first."});const token=(request.body as {token?:unknown})?.token;if(typeof token!=="string")return reply.code(400).send({error:"Invitation token is required."});const organizationId=await acceptInvitation(user.id,token);return organizationId?reply.send({ok:true,organizationId}):reply.code(400).send({error:"Invitation is invalid, expired, or intended for another email."});});
+  app.post<{Params:{id:string}}>("/api/plots/:id/transfer-to-organization",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.code(401).send({error:"Not signed in."});const b=(request.body??{}) as {organizationId?:unknown;reason?:unknown};if(typeof b.organizationId!=="string"||typeof b.reason!=="string"||!b.reason.trim())return reply.code(400).send({error:"organizationId and reason are required."});return await transferPlotToOrganization(user.id,request.params.id,b.organizationId,b.reason)?reply.send({ok:true}):reply.code(403).send({error:"Only the individual owner with organization resource permission can transfer this plot."});});
+  app.get("/organizations",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.redirect("/login");const orgs=await organizationsForUser(user.id);reply.header("content-type","text/html; charset=utf-8");return reply.send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Organizations — Dende</title><style>${TOP_NAV_CSS}body{margin:0;background:#f4f5f2;font-family:system-ui}.page{max-width:720px;margin:40px auto;padding:16px}.card{background:white;padding:24px;border-radius:14px}input,button{padding:10px}button{background:#193f2b;color:white;border:0;border-radius:7px}</style></head><body>${renderTopNav("account")}<main class="page"><section class="card"><h1>Organizations</h1><ul>${orgs.map((o:any)=>`<li><b>${o.name}</b> · ${o.role}</li>`).join("")||"<li>No organizations yet.</li>"}</ul><form id="new-org"><input name="name" required placeholder="Organization name"><button>Create organization</button><span role="status"></span></form></section></main><script>document.getElementById('new-org').onsubmit=async e=>{e.preventDefault();const f=e.target,r=await fetch('/api/account/organizations',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:f.name.value})}),j=await r.json();if(r.ok)location.reload();else f.querySelector('[role=status]').textContent=j.error};</script></body></html>`);});
+  app.get("/operator",async(request,reply)=>{if(!await requireInternal(request,reply,"internal.read"))return;const user=await requestAccount(request);if(!user)return reply.code(400).send({error:"The operator page requires a staff account session."});const staff=await staffProfile(user.id);reply.header("content-type","text/html; charset=utf-8");return reply.send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Operator access — Dende</title><style>${TOP_NAV_CSS}body{margin:0;background:#f4f5f2;color:#17211b;font-family:system-ui}.page{max-width:820px;margin:40px auto;padding:16px}.card{background:#fff;padding:24px;border-radius:14px;box-shadow:0 8px 24px #17211b12}.pill{display:inline-block;margin:3px;padding:6px 9px;border-radius:999px;background:#e8f1eb;font-size:13px}.expiry{color:#66736b;font-size:13px}a{color:#17603a}</style></head><body>${renderTopNav("account")}<main class="page"><section class="card"><p class="expiry">Privileged Dende access</p><h1>${user.displayName||user.email}</h1><h2>Active assignments</h2>${staff.assignments.map(a=>`<p><b>${a.role}</b> <span class="expiry">${a.expiresAt?`expires ${a.expiresAt}`:"no expiry set"}</span></p>`).join("")}<h2>Permissions</h2><p>${staff.permissions.map(p=>`<span class="pill">${p}</span>`).join("")}</p><p class="expiry">Every allowed and denied privileged request is recorded. Worker automation remains separately authenticated.</p></section></main></body></html>`);});
+  app.get("/account/records",async(request,reply)=>{const user=await requestAccount(request);if(!user)return reply.redirect("/login");const [plots,reports,notices]=await Promise.all([query<any>(`SELECT id,status,record_type,computed_area_sqm,created_at::text FROM registry.plots WHERE owner_user_id=$1 ORDER BY created_at DESC`,[user.id]),query<any>(`SELECT id,report_number,plot_id,generated_at::text FROM registry.evidence_reports WHERE owner_user_id=$1 ORDER BY generated_at DESC`,[user.id]),query<any>(`SELECT id,plot_id,ownership_status,status,submitted_at::text FROM registry.ownership_notices WHERE owner_user_id=$1 ORDER BY submitted_at DESC`,[user.id])]);const rows=[...plots.map(p=>`<li><a href="/api/plots/${p.id}/map">Plot ${p.id.slice(0,8)}</a> · ${p.record_type} · ${Number(p.computed_area_sqm??0).toFixed(1)} m²</li>`),...reports.map(r=>`<li><a href="/reports/${r.id}">${r.report_number}</a> · evidence report</li>`),...notices.map(n=>`<li><a href="/ownership-notices/${n.id}">Ownership notice ${n.id.slice(0,8)}</a> · ${n.status}</li>`)];reply.header("content-type","text/html; charset=utf-8");return reply.send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My records — Dende</title><style>${TOP_NAV_CSS}body{margin:0;background:#f4f5f2;font-family:system-ui}.page{max-width:760px;margin:40px auto;padding:16px}.card{background:#fff;padding:24px;border-radius:14px}li{padding:10px 0;border-bottom:1px solid #ddd}</style></head><body>${renderTopNav("account")}<main class="page"><section class="card"><h1>My records</h1><p>Only records created while signed in appear here. Legacy anonymous records remain unclaimed.</p><ul>${rows.join("")||"<li>No account-owned records yet.</li>"}</ul></section></main></body></html>`);});
+  app.get<{Params:{id:string}}>("/reports/:id",async(request,reply)=>{if(!validUuid(request.params.id))return reply.code(404).send({error:"Report not found."});const report=await fetchEvidenceReport(request.params.id);if(!report)return reply.code(404).send({error:"Report not found."});reply.header("content-type","text/html; charset=utf-8");return reply.send(renderEvidenceReportHtml(report));});
+  app.get<{Params:{id:string}}>("/reports/:id/download",async(request,reply)=>{if(!validUuid(request.params.id))return reply.code(404).send({error:"Report not found."});const report=await fetchEvidenceReport(request.params.id);if(!report)return reply.code(404).send({error:"Report not found."});reply.header("content-type","application/json; charset=utf-8");reply.header("content-disposition",`attachment; filename="${report.reportNumber}.json"`);return reply.send(report);});
   async function fetchSourceDetail(id: string): Promise<SourceDetail | null> {
     const row = await queryOne<{
       id:string;type:string;name:string;provider:string|null;country_code:string|null;admin_level_1:string|null;admin_level_2:string|null;format:string|null;source_url:string|null;license:string|null;authority_level:string;status:string;coverage_status:string;access_stage:string;access_method:string|null;access_notes:string|null;access_contact:string|null;access_reviewed_at:string|null;description:string|null;created_at:string;updated_at:string;feature_count:number;
@@ -731,8 +835,8 @@ export function buildApp(): FastifyInstance {
       })
     );
 
-    const latestEvidence = await queryOne<{ consulted_sources: ConsultedSource[] }>(
-      `SELECT consulted_sources FROM registry.check_runs WHERE plot_id = $1 ORDER BY ran_at DESC LIMIT 1`,
+    const latestEvidence = await queryOne<{ consulted_sources: ConsultedSource[]; report_id:string|null }>(
+      `SELECT c.consulted_sources,(SELECT id FROM registry.evidence_reports r WHERE r.check_run_id=c.id ORDER BY generated_at DESC LIMIT 1) report_id FROM registry.check_runs c WHERE c.plot_id = $1 ORDER BY c.ran_at DESC LIMIT 1`,
       [row.id]
     );
     const html = renderPlotMapHtml({
@@ -752,6 +856,7 @@ export function buildApp(): FastifyInstance {
       ownershipNotices: noticeMap[row.id] ?? [],
       ownershipHistory,
       consultedSources: latestEvidence?.consulted_sources ?? [],
+      latestReportId: latestEvidence?.report_id ?? null,
       overlaps: overlaps.map((overlap) => ({
         ...overlap,
         ownershipNotices: noticeMap[overlap.otherPlotId] ?? []

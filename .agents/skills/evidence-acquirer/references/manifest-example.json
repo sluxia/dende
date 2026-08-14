@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "acquisition-manifest/v1",
+  "assetExternalKey": "crs-example-layout-001",
+  "runKey": "2026-08-14-crossriver",
+  "jurisdiction": {
+    "countryCode": "NG",
+    "adminLevel1": "Cross River",
+    "adminLevel2": null,
+    "locality": "Calabar"
+  },
+  "approvalHandoffPath": "../../handoffs/crs-example-layout-001-approved.json",
+  "acquisitionStatus": "downloaded",
+  "relevanceAssessment": {
+    "decision": "relevant",
+    "reason": "The document title and authority identify the approved Cross River layout."
+  },
+  "files": [
+    {
+      "fileKey": "file-001",
+      "approvedUrl": "https://example.gov.ng/files/layout.pdf",
+      "requestedUrl": "https://example.gov.ng/files/layout.pdf",
+      "retrievalUrl": "https://example.gov.ng/files/layout.pdf",
+      "retrievedAt": "2026-08-14T12:05:00Z",
+      "status": "downloaded",
+      "originalPath": "original/layout.pdf",
+      "filename": "layout.pdf",
+      "fileExtension": "pdf",
+      "declaredMediaType": "application/pdf",
+      "detectedMediaType": "application/pdf",
+      "formatFamily": "pdf",
+      "byteSize": 182400,
+      "checksumSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "relationship": "primary",
+      "sourceJurisdiction": {
+        "countryCode": "NG",
+        "adminLevel1": "Cross River"
+      },
+      "supportsTargetBoundary": true,
+      "relationshipReason": "The coordinate schedule identifies the approved layout.",
+      "requiresVisualInspection": true,
+      "visualInspection": {
+        "status": "completed",
+        "inspector": "operator:internal",
+        "pagesOrItems": [1, 2, 3]
+      },
+      "accessNotes": [],
+      "errors": []
+    }
+  ],
+  "errors": []
+}

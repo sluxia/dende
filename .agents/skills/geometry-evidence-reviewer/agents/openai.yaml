@@ -1,0 +1,4 @@
+interface:
+  display_name: "Geometry Evidence Reviewer"
+  short_description: "Validate one quarantined land geometry candidate"
+  default_prompt: "Use $geometry-evidence-reviewer to validate one quarantined Dende geometry candidate."

@@ -70,16 +70,17 @@ export async function createOwnershipNotice(input: {
   contactReference?: string | null;
   statement?: string | null;
   visibility?: OwnershipNotice["visibility"];
+  ownerUserId?: string | null;
 }): Promise<OwnershipNotice & { managementKey: string }> {
   const managementKey = randomBytes(32).toString("base64url");
   const row = await queryOne<NoticeRow>(
     `INSERT INTO registry.ownership_notices
-       (plot_id, submitter_name, contact_reference, statement, visibility, management_key_hash)
-     VALUES ($1, $2, $3, $4, $5, $6)
+       (plot_id, submitter_name, contact_reference, statement, visibility, management_key_hash, owner_user_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, plot_id, submitter_name, statement, ownership_status,
                verification_level, visibility, status, submitted_at, verified_at`,
     [input.plotId, input.submitterName ?? null, input.contactReference ?? null,
-      input.statement ?? null, input.visibility ?? "public", keyHash(managementKey)]
+      input.statement ?? null, input.visibility ?? "public", keyHash(managementKey), input.ownerUserId ?? null]
   );
   if (!row) throw new Error("Could not create ownership notice.");
   return { ...mapNotice(row), managementKey };

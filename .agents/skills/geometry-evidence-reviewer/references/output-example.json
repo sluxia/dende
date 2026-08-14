@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "geometry-evidence-review/v1",
+  "reviewExternalKey": "crs-example-layout-001-geometry-001-review-v1",
+  "assetExternalKey": "crs-example-layout-001",
+  "candidateExternalKey": "crs-example-layout-001-geometry-001",
+  "inputAnalysisExternalKey": "crs-example-layout-001-analysis-v1",
+  "inputChecksumSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "identity": {
+    "assetMatches": true,
+    "jurisdictionMatches": true,
+    "instrumentMatches": null,
+    "candidateSourcesSupportTarget": true,
+    "reason": "The acquired plan identifies the approved asset, but instrument identity remains incomplete."
+  },
+  "reviewedAt": "2026-08-14T12:30:00Z",
+  "reviewer": {
+    "type": "human_assisted",
+    "identifier": "operator:internal",
+    "methodVersion": "geometry-evidence-reviewer-v1"
+  },
+  "decision": "ambiguous",
+  "decisionReason": "The printed table is legible, but the document does not resolve whether Nigeria Mid or East Belt applies.",
+  "activationRecommended": false,
+  "activationPrerequisites": {
+    "tierOneOrTwoEvidence": false,
+    "approvedAuthorityProvenance": false,
+    "derivedOrAuthoritativeGeometry": false,
+    "validTopology": false,
+    "explicitCoverage": false,
+    "completeProvenance": true,
+    "currentOrCurrencyResolved": false
+  },
+  "coverage": {
+    "status": "unknown",
+    "included": ["Four printed coordinate rows on page 3"],
+    "excluded": ["Any rows or sheets not present in the acquired document"]
+  },
+  "sourceCrs": null,
+  "geometryPath": null,
+  "observationReviews": [
+    {
+      "observationExternalKey": "crs-example-layout-001-coordinate-001",
+      "status": "confirmed",
+      "sourceLocator": "original/layout.pdf, page 3, Table 2, row A1",
+      "reason": "Label and both printed values match the preserved source."
+    }
+  ],
+  "gates": [
+    { "gate": "provenance", "status": "passed", "reason": "Checksum matches the acquisition manifest.", "evidence": ["manifest.json", "original/layout.pdf"] },
+    { "gate": "asset_identity", "status": "passed", "reason": "Asset and jurisdiction match the approved handoff.", "evidence": ["approved asset handoff", "manifest.json"] },
+    { "gate": "observation_fidelity", "status": "passed", "reason": "All candidate observations were located and matched.", "evidence": ["page 3, Table 2"] },
+    { "gate": "crs_semantics", "status": "ambiguous", "reason": "Two plausible Minna belt CRSs remain.", "evidence": ["page 3 coordinate headings"] },
+    { "gate": "construction", "status": "ambiguous", "reason": "Absolute placement depends on unresolved CRS.", "evidence": ["analysis.json"] },
+    { "gate": "geometric_validity", "status": "not_applicable", "reason": "No defensible WGS84 candidate was constructed.", "evidence": [] },
+    { "gate": "closure_topology", "status": "not_applicable", "reason": "The available example contains too few rows for a full perimeter.", "evidence": [] },
+    { "gate": "area_agreement", "status": "not_applicable", "reason": "No full candidate geometry was constructed.", "evidence": ["page 2, plan note 4"] },
+    { "gate": "geographic_plausibility", "status": "ambiguous", "reason": "Plausibility differs by candidate CRS.", "evidence": [] },
+    { "gate": "instrument_currency", "status": "ambiguous", "reason": "The approval/effective status of the plan is not shown.", "evidence": ["document title page"] },
+    { "gate": "coverage_activation", "status": "failed", "reason": "Coverage and CRS are unresolved; activation is unsuitable.", "evidence": [] }
+  ],
+  "metrics": {
+    "geometryType": null,
+    "vertexCount": null,
+    "isValid": null,
+    "validityReason": null,
+    "closureErrorM": null,
+    "statedAreaSqm": 246000,
+    "computedAreaSqm": null,
+    "areaDifferencePercent": null,
+    "duplicateVertexCount": null,
+    "selfIntersectionCount": null
+  },
+  "transformation": null,
+  "limitations": [
+    "This review does not establish title or the legal currency of the plan.",
+    "No geometry has been accepted or activated."
+  ],
+  "nextEvidenceNeeded": [
+    "Obtain the plan legend or survey record that declares the applicable datum and projection belt.",
+    "Obtain the complete coordinate schedule and evidence of instrument currency."
+  ],
+  "validation": {
+    "schema": "passed",
+    "geojson": "not_applicable",
+    "geometry": "not_applicable"
+  }
+}
